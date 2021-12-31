@@ -1,0 +1,72 @@
+<html>
+<head>
+</head>
+<body>
+  <svg xmlns="http://www.w3.org/2000/svg">
+    <rect id="screen"/>
+    <rect id="table"/>
+  </svg>
+</body>
+<script>
+
+  placeRandomBall();
+
+  function placePredictedCueLocation() {
+    var currentLocation = getCueCurrentLocation();
+    var currentX = currentLocation[0];
+    var currentY = currentLocation[1];
+    var predictedLocation = getPredictedLocation(currentX, currentY, cursorX, cursorY);
+    var predictedX = predictedLocation[0];
+    var predictedY = predictedLocation[1];
+    placeBall('white', predictedX, predictedY);
+  }
+
+  function getCueCurrentLocation() {
+    var cueBall = document.getElementById('cue');
+    var location = cueBall.getBoundingClientRect();
+    var x = location.left;
+  }
+
+  function placeRandomBall(color) {
+    placeBall('red', Math.random() * 500 + 'px', Math.random() * 250 + 'px', 'cue');
+  }
+
+  function placeBall(color, cx, cy, id) {
+    appendSVG('circle', function(element) {
+      element.style.fill = color || 'red';
+      element.style.r = '10px';
+      element.style.cx = cx;
+      element.style.cy = cy;
+      if (id) element.id = 'cue';
+    });
+  }
+
+  function appendSVG(type, setAttributeAndStyle) {
+    var svg = document.getElementsByTagName('svg')[0];
+    var newElement = document.createElementNS("http://www.w3.org/2000/svg", type);
+    if (setAttributeAndStyle) setAttributeAndStyle(newElement);
+    svg.appendChild(newElement);
+  }
+</script>
+<style>
+  
+  svg {
+    width: 800px;
+    height: 400px;
+    display: block;
+    margin: auto;
+  }
+
+  #screen {
+    width: 100%;
+    height: 100%;
+  }
+
+  #table {
+    fill: blue;
+    width: 500px;
+    height: 250px;
+  }
+
+</style>
+</html>
