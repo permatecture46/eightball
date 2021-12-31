@@ -11,8 +11,22 @@
 
   placeRandomBall();
 
-  function placePredictedCueLocation() {
-    var currentLocation = getCueCurrentLocation();
+  document.addEventListener('mousemove', function(event) {
+    var location = getElementTableLocation([event.clientX, event.clientY]);
+    var x = location[0];
+    var y = location[1];
+    if (cursorOnTable(x, y)) placePredictedCueLocation(x, y);
+  });
+
+  function cursorOnTable(cursorX, cursorY) {
+    if (cursorX < 0 || cursorY < 0) {
+      return true;
+    }
+// COMPLETE THIS FUNCTION
+  }
+
+  function placePredictedCueLocation(cursorX, cursorY) {
+    var currentLocation = getElementTableLocation('cue');
     var currentX = currentLocation[0];
     var currentY = currentLocation[1];
     var predictedLocation = getPredictedLocation(currentX, currentY, cursorX, cursorY);
@@ -21,14 +35,26 @@
     placeBall('white', predictedX, predictedY);
   }
 
-  function getCueCurrentLocation() {
-    var cueBall = document.getElementById('cue');
-    var location = cueBall.getBoundingClientRect();
-    var x = location.left;
+  function getElementTableLocationByID(id) {
+    var location = document.getElementById(id).getBoundingClientRect();
+    return getElementTableLocation(location);
+  }
+
+  function getElementTableLocation(location) {
+    var tableLocation = document.getElementById('table').getBoundingClientRect();
+    var x = location[0] - tableLocation.left;
+    var y = location[1] - tableLocation.top;
+    return [x, y];
+  }
+
+  function getPredictedLocation(currentX, currentY, cursorX, cursorY) {
+    
   }
 
   function placeRandomBall(color) {
-    placeBall('red', Math.random() * 500 + 'px', Math.random() * 250 + 'px', 'cue');
+    var randomX = Math.random() * 500 + 'px';
+    var randomY = Math.random() * 250 + 'px';
+    placeBall('red', randomX, randomY, 'cue');
   }
 
   function placeBall(color, cx, cy, id) {
@@ -37,7 +63,7 @@
       element.style.r = '10px';
       element.style.cx = cx;
       element.style.cy = cy;
-      if (id) element.id = 'cue';
+      if (id) element.id = id;
     });
   }
 
@@ -47,6 +73,7 @@
     if (setAttributeAndStyle) setAttributeAndStyle(newElement);
     svg.appendChild(newElement);
   }
+
 </script>
 <style>
   
@@ -55,6 +82,7 @@
     height: 400px;
     display: block;
     margin: auto;
+    margin-top: 50px;
   }
 
   #screen {
