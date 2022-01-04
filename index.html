@@ -79,7 +79,7 @@
   }
 
   function getPredictedLocation(currentX, currentY, cursorX, cursorY) {
-    var slope = (currentX - cursorX) / (currentY - cursorY);
+    var slope = (currentY - cursorY) / (currentX - cursorX);
     var yIntercept = currentY - (slope * currentX);
     var quadrant = getCursorQuadrant(currentX, currentY, cursorX, cursorY);
     var location;
@@ -126,7 +126,6 @@
   }
 
   function getLocationAgainstTable(slope, yIntercept, quadrant) {
-console.log(arguments);
     // NOTE: Wall A is the far right wall; then the walls are named clockwise in alphabetical order
     var location;
     if (quadrant == 1) {
@@ -176,9 +175,9 @@ console.log(arguments);
 
   function getLocationAgainstWallB(slope, yIntercept) {
     var yOfWall = TABLE_HEIGHT;
-    var xMax = TABLE_WIDTH;
+    var xMin = 0;
     var xInterceptAgainstWall = (yOfWall - yIntercept) / slope;
-    if (xInterceptAgainstWall > xMax) {
+    if (xInterceptAgainstWall < xMin) {
       return false;
     }
     else {
@@ -189,13 +188,13 @@ console.log(arguments);
 
   function getLocationAgainstWallC(slope, yIntercept) {
     var xOfWall = 0;
-    var yMax = TABLE_HEIGHT;
+    var yMin = 0;
     var yInterceptAgainstWall = xOfWall * slope + yIntercept;
-    if (yInterceptAgainstWall > yMax) {
+    if (yInterceptAgainstWall < yMin) {
       return false;
     }
     else {
-      var x = xOfWall + BALL_RADIUS;
+      var x = xOfWall + BALL_RADIUS_PERCENTAGE * TABLE_WIDTH;
       return [ x, getY(x, slope, yIntercept) ];
     }
   }
@@ -208,7 +207,7 @@ console.log(arguments);
       return false;
     }
     else {
-      var y = yOfWall + BALL_RADIUS;
+      var y = yOfWall + BALL_RADIUS_PERCENTAGE * TABLE_WIDTH;
       return [ getX(y, slope, yIntercept), y ];
     }
   }
