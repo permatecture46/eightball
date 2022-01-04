@@ -15,10 +15,13 @@
   var BALL_RADIUS_PERCENTAGE = .02;
   var TABLE_WIDTH, TABLE_HEIGHT, BALL_RADIUS_VALUE;
 
+  var ballsOnTable;
+
 
   window.addEventListener('load', function(event) {
     setTableSizeVariables();
     placeRandomBall();
+    ballsOnTable = placeRandomBalls();
     setPredictedCueLocationListener();
   });
 
@@ -34,8 +37,8 @@
     });
   }
 
-  function l(print){
-    console.log(print);
+  function lz(print, print2, print3, print4){
+    console.log(print, print2, print3, print4);
   }
 
   function clearPreviousPredictedLocation() {
@@ -95,9 +98,114 @@
     var yIntercept = currentY - (slope * currentX);
     var quadrant = getCursorQuadrant(currentX, currentY, cursorX, cursorY);
     var location;
-// FILL ME IN
-    location = getLocationAgainstTable(slope, yIntercept, quadrant);
+    location = getLocationAgainstBall(slope, yIntercept, quadrant, currentX, currentY);
+    if (!location) {
+      location = getLocationAgainstTable(slope, yIntercept, quadrant);
+    }
     return location;
+  }
+
+  function getLocationAgainstBall(slope, yIntercept, quadrant, currentX, currentY) {
+    var balls = getBallsInCorrectQuadrant(quadrant, currentX, currentY);
+    var unachievableDistance = TABLE_WIDTH;
+    var currentShortestDistance = unachievableDistance;
+    var closestBallAndDistanceAndPerpendicularPoint = [null, null, null ];
+    for (var i = 0; i < balls.length; i++) {
+      var ball = balls[i];
+      var distanceAndPoint = distanceFromCueTrajectory(ball, slope, yIntercept, currentX, currentY);
+      var distance = distanceAndPoint[0];
+      if (distance < currentShortestDistance) {
+        currentShortestDistance = distance;
+        closestBallAndDistanceAndPerpendicularPoint = [ball, currentShortestDistance, distanceAndPoint[1] ];
+      }
+    }
+    var distanceBetweenCenterOfTwoBalls = BALL_RADIUS_VALUE * 2;
+    var foundIntersectingBall = currentShortestDistance < distanceBetweenCenterOfTwoBalls;
+    if (foundIntersectingBall) {
+      var distanceBetweenContactPointAndPerpendicularPoint = getSideFromHypotenuseAndSide(distanceBetweenCenterOfTwoBalls, currentShortestDistance);
+      var perpendicularPoint = closestBallAndDistanceAndPerpendicularPoint[2];
+      var perpendicularPointX = perpendicularPoint[0];
+      var perpendicularPointY = perpendicularPoint[1];
+      var distanceBetweenCueAndPerpendicularPoint = getHypotenuseFromDifferences(perpendicularPointX - currentX, perpendicularPointY - currentY);
+      var ratioBetweenTwoDistanceTriangles = distanceBetweenContactPointAndPerpendicularPoint / distanceBetweenCueAndPerpendicularPoint;
+      var ballCenterX = pixelLocationToNumericalValue(ball.style.cx);
+      var ballCenterY = pixelLocationToNumericalValue(ball.style.cy);
+      var xFromBallCenterToCueCenter = currentX - pixelLocationToNumericalValue(ball.style.cx);
+      var yFromBallCenterToCueCenter = currentY - pixelLocationToNumericalValue(ball.style.cy);
+      var xFromBallCenter = ratioBetweenTwoDistanceTriangles * xFromBallCenterToCueCenter;
+      var yFromBallCenter = ratioBetweenTwoDistanceTriangles * yFromBallCenterToCueCenter;
+      return [ ballCenterX + xFromBallCenter, ballCenterY + yFromBallCenter];
+    }
+    else {
+      return false;
+    }
+  }
+
+  function distanceFromCueTrajectory(ball, slope, yIntercept, currentX, currentY) {
+    var ballX = pixelLocationToNumericalValue(ball.style.cx);
+    var ballY = pixelLocationToNumericalValue(ball.style.cy);
+    var perpendicularSlope = (1 / slope) * -1;
+    var yInterceptOfPerpendicularLine = ballY - (perpendicularSlope * ballX);
+    var intersectionX = (yIntercept - yInterceptOfPerpendicularLine) / (perpendicularSlope - slope);
+    var intersectionY = intersectionX * slope + yIntercept;
+    var distance = getHypotenuseFromDifferences(ballX - intersectionX, ballY - intersectionY);
+    return [ distance, [ intersectionX, intersectionY ] ];
+  }
+
+  function getHypotenuseFromDifferences(x, y) {
+    return Math.sqrt(Math.pow(Math.abs(x), 2) + Math.pow(Math.abs(y), 2));
+  }
+
+  function getSideFromHypotenuseAndSide(hypotenuse, side) {
+    return Math.sqrt(Math.pow(Math.abs(hypotenuse), 2) - Math.pow(Math.abs(side), 2));
+  }
+
+  function getBallsInCorrectQuadrant(quadrant, currentX, currentY) {
+    var balls = [];
+    for (var i = 0; i < ballsOnTable.length; i++) {
+      var ball = ballsOnTable[i];
+      if (ballInCorrectQuadrant(ball, quadrant, currentX, currentY)) {
+        balls.push(ball);
+      }
+    }
+    return balls;
+  }
+
+  function ballInCorrectQuadrant(ball, quadrant, currentX, currentY) {
+    var ballX = pixelLocationToNumericalValue(ball.style.cx);
+    var ballY = pixelLocationToNumericalValue(ball.style.cy);
+    if (quadrant == 1 && ballX > currentX && ballY > currentY) {
+      return true;
+    }
+    else if (quadrant == 2 && ballX < currentX && ballY > currentY) {
+      return true;
+    }
+    else if (quadrant == 3 && ballX < currentX && ballY < currentY) {
+      return true;
+    }
+    else if (quadrant == 4 && ballX > currentX && ballY < currentY) {
+      return true;
+    }
+    else if (quadrant == 1.5 && ballX == currentX && ballY < currentY) {
+      return true;
+    }
+    else if (quadrant == 2.5 && ballX < currentX && ballY == currentY) {
+      return true;
+    }
+    else if (quadrant == 3.5 && ballX == currentX && ballY > currentY) {
+      return true;
+    }
+    else if (quadrant == 4.5 && ballX > currentX && ballY == currentY) {
+      return true;
+    }
+    else {
+      return false;
+    }
+  }
+
+  function pixelLocationToNumericalValue(string) {
+    string = string.slice(0, -3);
+    return Number(string);
   }
 
   function getCursorQuadrant(currentX, currentY, cursorX, cursorY) {
@@ -232,20 +340,37 @@
     return x * slope + yIntercept;
   }
 
-  function placeRandomBall(color) {
+  function placeRandomBall(color, multiple) {
     var randomX = Math.random() * (TABLE_WIDTH - BALL_RADIUS_VALUE * 2) + BALL_RADIUS_VALUE + 'px';
     var randomY = Math.random() * (TABLE_HEIGHT - BALL_RADIUS_VALUE * 2) + BALL_RADIUS_VALUE + 'px';
-    placeBall('red', randomX, randomY, 'cue');
+    if (!multiple) {
+      placeBall(color || 'red', randomX, randomY, 'cue');
+    }
+    else {
+      return placeBall(color || 'red', randomX, randomY);
+    }
+  }
+
+  function placeRandomBalls() {
+    var balls = [];
+    for (var i = 0; i < 3; i++) {
+      var ball = placeRandomBall('green', true);
+      balls.push(ball);
+    }
+    return balls;
   }
 
   function placeBall(color, cx, cy, id) {
+    var ball;
     appendSVG('circle', function(element) {
+      ball = element;
       element.style.fill = color || 'red';
       element.style.r = BALL_RADIUS;
       element.style.cx = cx;
       element.style.cy = cy;
       if (id) element.id = id;
     });
+    return ball;
   }
 
   function appendSVG(type, setAttributeAndStyle) {
