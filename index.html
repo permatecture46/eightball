@@ -2,42 +2,73 @@
 <head>
 </head>
 <body>
-  <svg xmlns="http://www.w3.org/2000/svg">
-    <rect id="screen"/>
-    <rect id="table"/>
-  </svg>
+  <div id="container">
+    <svg xmlns="http://www.w3.org/2000/svg">
+      <rect id="screen"/>
+      <rect id="table"/>
+    </svg>
+  </div>
 </body>
 <script>
+
+  var BALL_RADIUS = "2%";
+  var BALL_RADIUS_PERCENTAGE = .02;
+  var TABLE_WIDTH, TABLE_HEIGHT;
 
   placeRandomBall();
 
   document.addEventListener('mousemove', function(event) {
+    if (!TABLE_WIDTH) setTableSizeVariables();
     var location = getElementTableLocation([event.clientX, event.clientY]);
     var x = location[0];
     var y = location[1];
-    if (cursorOnTable(x, y)) placePredictedCueLocation(x, y);
+    if (cursorOnTable(x, y)) {
+      clearPreviousPredictedLocation();
+      placePredictedCueLocation(x, y);
+    }
   });
+
+  function clearPreviousPredictedLocation() {
+    var predictedBall = document.getElementById('predicted');
+    if (predictedBall) {
+      predictedBall.parentNode.removeChild(predictedBall);
+    }
+  }
+
+  function setTableSizeVariables() {
+    var table = document.getElementById('table');
+    if (table) {
+      var tableInfo = table.getBoundingClientRect();
+      TABLE_WIDTH = tableInfo.width;
+      TABLE_HEIGHT = tableInfo.height;
+    }
+  }
 
   function cursorOnTable(cursorX, cursorY) {
     if (cursorX < 0 || cursorY < 0) {
+      return false;
+    }
+    else if (cursorX > TABLE_WIDTH || cursorY > TABLE_HEIGHT) {
+      return false;
+    }
+    else {
       return true;
     }
-// COMPLETE THIS FUNCTION
   }
 
   function placePredictedCueLocation(cursorX, cursorY) {
-    var currentLocation = getElementTableLocation('cue');
+    var currentLocation = getElementTableLocationByID('cue');
     var currentX = currentLocation[0];
     var currentY = currentLocation[1];
     var predictedLocation = getPredictedLocation(currentX, currentY, cursorX, cursorY);
     var predictedX = predictedLocation[0];
     var predictedY = predictedLocation[1];
-    placeBall('white', predictedX, predictedY);
+    placeBall('white', predictedX, predictedY, 'predicted');
   }
 
   function getElementTableLocationByID(id) {
     var location = document.getElementById(id).getBoundingClientRect();
-    return getElementTableLocation(location);
+    return getElementTableLocation([ location.left, location.top ]);
   }
 
   function getElementTableLocation(location) {
@@ -48,7 +79,146 @@
   }
 
   function getPredictedLocation(currentX, currentY, cursorX, cursorY) {
-    
+    var slope = (currentX - cursorX) / (currentY - cursorY);
+    var yIntercept = currentY - (slope * currentX);
+    var quadrant = getCursorQuadrant(currentX, currentY, cursorX, cursorY);
+    var location;
+// FILL ME IN
+    location = getLocationAgainstTable(slope, yIntercept, quadrant);
+    return location;
+  }
+
+  function getCursorQuadrant(currentX, currentY, cursorX, cursorY) {
+    // NOTE: output corresponds to quadrants of cartesian graph; half-values for when cursor on line
+    if (cursorX < currentX) {
+      if (cursorY < currentY) {
+        return 3;
+      }
+      else if (cursorY > currentY) {
+        return 2;
+      }
+      else {
+        return 2.5;
+      }
+    }
+    else if (cursorX > currentX) {
+      if (cursorY > currentY) {
+        return 1;
+      }
+      else if (cursorY < currentY) {
+        return 4;
+      }
+      else {
+        return 4.5;
+      }
+    }
+    else {
+      if (cursorY > currentY) {
+        return 1.5;
+      }
+      else if (cursorY < currentY) {
+        return 3.5;
+      }
+      else {
+        return 4.5;
+      }
+    }
+  }
+
+  function getLocationAgainstTable(slope, yIntercept, quadrant) {
+console.log(arguments);
+    // NOTE: Wall A is the far right wall; then the walls are named clockwise in alphabetical order
+    var location;
+    if (quadrant == 1) {
+      location = getLocationAgainstWallA(slope, yIntercept, quadrant);
+      if (!location) location = getLocationAgainstWallB(slope, yIntercept, quadrant);
+    }
+    else if (quadrant == 2) {
+      location = getLocationAgainstWallB(slope, yIntercept, quadrant);
+      if (!location) location = getLocationAgainstWallC(slope, yIntercept, quadrant);
+    }
+    else if (quadrant == 3) {
+      location = getLocationAgainstWallC(slope, yIntercept, quadrant);
+      if (!location) location = getLocationAgainstWallD(slope, yIntercept, quadrant);
+    }
+    else if (quadrant == 4) {
+      location = getLocationAgainstWallD(slope, yIntercept, quadrant);
+      if (!location) location = getLocationAgainstWallA(slope, yIntercept, quadrant);
+    }
+    else if (quadrant == 1.5) {
+      location = getLocationAgainstWallB(slope, yIntercept, quadrant);
+    }
+    else if (quadrant == 2.5) {
+      location = getLocationAgainstWallC(slope, yIntercept, quadrant);
+    }
+    else if (quadrant == 3.5) {
+      location = getLocationAgainstWallD(slope, yIntercept, quadrant);
+    }
+    else if (quadrant == 4.5) {
+      location = getLocationAgainstWallA(slope, yIntercept, quadrant);
+    }
+    return location;
+  }
+
+  function getLocationAgainstWallA(slope, yIntercept) {
+    // NOTE: Wall A is the far right wall; then the walls are named clockwise in alphabetical order
+    var xOfWall = TABLE_WIDTH;
+    var yMax = TABLE_HEIGHT;
+    var yInterceptAgainstWall = xOfWall * slope + yIntercept;
+    if (yInterceptAgainstWall > yMax) {
+      return false;
+    }
+    else {
+      var x = xOfWall - BALL_RADIUS_PERCENTAGE * TABLE_WIDTH;
+      return [ x, getY(x, slope, yIntercept) ];
+    }
+  }
+
+  function getLocationAgainstWallB(slope, yIntercept) {
+    var yOfWall = TABLE_HEIGHT;
+    var xMax = TABLE_WIDTH;
+    var xInterceptAgainstWall = (yOfWall - yIntercept) / slope;
+    if (xInterceptAgainstWall > xMax) {
+      return false;
+    }
+    else {
+      var y = yOfWall - BALL_RADIUS_PERCENTAGE * TABLE_WIDTH;
+      return [ getX(y, slope, yIntercept), y ];
+    }
+  }
+
+  function getLocationAgainstWallC(slope, yIntercept) {
+    var xOfWall = 0;
+    var yMax = TABLE_HEIGHT;
+    var yInterceptAgainstWall = xOfWall * slope + yIntercept;
+    if (yInterceptAgainstWall > yMax) {
+      return false;
+    }
+    else {
+      var x = xOfWall + BALL_RADIUS;
+      return [ x, getY(x, slope, yIntercept) ];
+    }
+  }
+
+  function getLocationAgainstWallD(slope, yIntercept) {
+    var yOfWall = 0;
+    var xMax = TABLE_WIDTH;
+    var xInterceptAgainstWall = (yOfWall - yIntercept) / slope;
+    if (xInterceptAgainstWall > xMax) {
+      return false;
+    }
+    else {
+      var y = yOfWall + BALL_RADIUS;
+      return [ getX(y, slope, yIntercept), y ];
+    }
+  }
+
+  function getX(y, slope, yIntercept) {
+    return (y - yIntercept) / slope;
+  }
+
+  function getY(x, slope, yIntercept) {
+    return x * slope + yIntercept;
   }
 
   function placeRandomBall(color) {
@@ -60,7 +230,7 @@
   function placeBall(color, cx, cy, id) {
     appendSVG('circle', function(element) {
       element.style.fill = color || 'red';
-      element.style.r = '10px';
+      element.style.r = BALL_RADIUS;
       element.style.cx = cx;
       element.style.cy = cy;
       if (id) element.id = id;
@@ -76,10 +246,18 @@
 
 </script>
 <style>
+
+  #container {
+    height: 400px;
+    width: 800px;
+    display: block;
+    margin: auto;
+    margin-top: 50px;
+  }
   
   svg {
-    width: 800px;
-    height: 400px;
+    width: 100%;
+    height: 100%;
     display: block;
     margin: auto;
     margin-top: 50px;
@@ -92,8 +270,8 @@
 
   #table {
     fill: blue;
-    width: 500px;
-    height: 250px;
+    width: 62.5%;
+    height: 62.5%;
   }
 
 </style>
