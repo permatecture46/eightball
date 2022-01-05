@@ -15,14 +15,16 @@
   var ACTUAL_BALL_RADIUS_PERCENTAGE = BALL_RADIUS_PERCENTAGE + .265 * BALL_RADIUS_PERCENTAGE; // for some reason this is how it renders...
   var BALL_RADIUS = BALL_RADIUS_PERCENTAGE * 100 + "%";
   var TABLE_WIDTH, TABLE_HEIGHT, BALL_RADIUS_VALUE;
+  var TIME_BETWEEN_INCREMENTS = 50;
 
-  var ballsOnTable;
+  var ballsOnTable = [];
 
   window.addEventListener('load', function(event) {
     setTableSizeVariables();
-    placeRandomBall();
-    ballsOnTable = placeRandomBalls();
+    // ballsOnTable = placeRandomBalls();
+    ballsOnTable.push(placeRandomBall());
     setPredictedCueLocationListener();
+    setClickListener();
   });
 
   function setPredictedCueLocationListener() {
@@ -35,6 +37,50 @@
         placePredictedCueLocation(x, y);
       }
     });
+  }
+
+  function setClickListener() {
+    document.addEventListener('click', function(event) {
+      setInitialCueBallMovementData(event.clientX, event.clientY);
+      incrementLocationsOfBalls();
+    });
+  }
+  
+  function setInitialCueBallMovementData(cursorX, cursorY) {
+    var cueBall = document.getElementById('cue');
+    var cueBallLocation = cueBall.getBoundingClientRect();
+    cueBall.x = pixelLocationToNumericalValue(cueBall.style.cx);
+    cueBall.y = pixelLocationToNumericalValue(cueBall.style.cy);
+    cueBall.slope = (cursorX - cueBall.x)  / (cursorY - cueBall.y);
+    cueBall.direction = cursorX < cueBall.x ? 'left' : 'right';
+    cueBall.distanceMovedPerIncrement = 5;
+    cueBall.isMoving = true;
+  }
+
+  function incrementLocationsOfBalls() {
+    for (var i = 0; i < ballsOnTable.length; i++) {
+      var ball = ballsOnTable[i];
+      if (ball.isMoving) {
+        var newLocation = calculateNewLocation(ball);
+        ball.style.cx = newLocation.x + 'px';
+        ball.style.cy = newLocation.y + 'px';
+      }
+    }
+    setTimeout(function() {
+// add set up because gets cleared
+      incrementLocationsOfBalls();
+    }, TIME_BETWEEN_INCREMENTS);
+  }
+
+  function calculateNewLocation(ball) {
+    var ballComponentX = ball.direction == 'left' ? -1 : 1;
+    var ballComponentY = ball.slope * ballComponentX;
+    var distanceTraveledX = Math.sqrt(ball.distanceMovedPerIncrement / (1 + Math.pow(ballComponentY, 2)));
+    var distanceTraveledY = ball.slope * distanceTraveledX;
+    return {
+      x: ball.x + distanceTraveledX,
+      y: ball.y + distanceTraveledY,
+    };
   }
 
   function lz(print, print2, print3, print4){
@@ -168,7 +214,7 @@
     var balls = [];
     for (var i = 0; i < ballsOnTable.length; i++) {
       var ball = ballsOnTable[i];
-      if (ballInCorrectQuadrant(ball, quadrant, currentX, currentY)) {
+      if (ball.id != "cue" && ballInCorrectQuadrant(ball, quadrant, currentX, currentY)) {
         balls.push(ball);
       }
     }
@@ -348,7 +394,7 @@
     var randomX = Math.random() * (TABLE_WIDTH - BALL_RADIUS_VALUE * 2) + BALL_RADIUS_VALUE + 'px';
     var randomY = Math.random() * (TABLE_HEIGHT - BALL_RADIUS_VALUE * 2) + BALL_RADIUS_VALUE + 'px';
     if (!multiple) {
-      placeBall(color || 'red', randomX, randomY, 'cue');
+      return placeBall(color || 'red', randomX, randomY, 'cue');
     }
     else {
       return placeBall(color || 'red', randomX, randomY);
