@@ -11,12 +11,12 @@
 </body>
 <script>
 
-  var BALL_RADIUS = "2%";
-  var BALL_RADIUS_PERCENTAGE = .02;
+  var BALL_RADIUS_PERCENTAGE = .0205; // this value makes it so it becomes the actual American standard of ~.026
+  var ACTUAL_BALL_RADIUS_PERCENTAGE = BALL_RADIUS_PERCENTAGE + .265 * BALL_RADIUS_PERCENTAGE; // for some reason this is how it renders...
+  var BALL_RADIUS = BALL_RADIUS_PERCENTAGE * 100 + "%";
   var TABLE_WIDTH, TABLE_HEIGHT, BALL_RADIUS_VALUE;
 
   var ballsOnTable;
-
 
   window.addEventListener('load', function(event) {
     setTableSizeVariables();
@@ -54,7 +54,7 @@
       var tableInfo = table.getBoundingClientRect();
       TABLE_WIDTH = tableInfo.width;
       TABLE_HEIGHT = tableInfo.height;
-      BALL_RADIUS_VALUE = BALL_RADIUS_PERCENTAGE * TABLE_WIDTH;
+      BALL_RADIUS_VALUE = ACTUAL_BALL_RADIUS_PERCENTAGE * TABLE_WIDTH;
     }
   }
 
@@ -109,7 +109,7 @@
     var balls = getBallsInCorrectQuadrant(quadrant, currentX, currentY);
     var unachievableDistance = TABLE_WIDTH;
     var currentShortestDistance = unachievableDistance;
-    var closestBallAndDistanceAndPerpendicularPoint = [null, null, null ];
+    var closestBallAndDistanceAndPerpendicularPoint = [ null, null, null ];
     for (var i = 0; i < balls.length; i++) {
       var ball = balls[i];
       var distanceAndPoint = distanceFromCueTrajectory(ball, slope, yIntercept, currentX, currentY);
@@ -122,6 +122,7 @@
     var distanceBetweenCenterOfTwoBalls = BALL_RADIUS_VALUE * 2;
     var foundIntersectingBall = currentShortestDistance < distanceBetweenCenterOfTwoBalls;
     if (foundIntersectingBall) {
+// put in function
       var distanceBetweenContactPointAndPerpendicularPoint = getSideFromHypotenuseAndSide(distanceBetweenCenterOfTwoBalls, currentShortestDistance);
       var perpendicularPoint = closestBallAndDistanceAndPerpendicularPoint[2];
       var perpendicularPointX = perpendicularPoint[0];
@@ -130,11 +131,12 @@
       var ratioBetweenTwoDistanceTriangles = distanceBetweenContactPointAndPerpendicularPoint / distanceBetweenCueAndPerpendicularPoint;
       var ballCenterX = pixelLocationToNumericalValue(ball.style.cx);
       var ballCenterY = pixelLocationToNumericalValue(ball.style.cy);
-      var xFromBallCenterToCueCenter = currentX - pixelLocationToNumericalValue(ball.style.cx);
-      var yFromBallCenterToCueCenter = currentY - pixelLocationToNumericalValue(ball.style.cy);
-      var xFromBallCenter = ratioBetweenTwoDistanceTriangles * xFromBallCenterToCueCenter;
-      var yFromBallCenter = ratioBetweenTwoDistanceTriangles * yFromBallCenterToCueCenter;
-      return [ ballCenterX + xFromBallCenter, ballCenterY + yFromBallCenter];
+      var xFromBallCenterToCueCenter = currentX - ballCenterX;
+      var yFromBallCenterToCueCenter = currentY - ballCenterY;
+      var xFromBallCenterToContactCenter = ratioBetweenTwoDistanceTriangles * xFromBallCenterToCueCenter;
+      var yFromBallCenterToContactCenter = ratioBetweenTwoDistanceTriangles * yFromBallCenterToCueCenter;
+      var result = [ perpendicularPointX + xFromBallCenterToContactCenter, perpendicularPointY + yFromBallCenterToContactCenter];
+      return result;
     }
     else {
       return false;
