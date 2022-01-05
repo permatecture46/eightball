@@ -108,34 +108,28 @@
   function getLocationAgainstBall(slope, yIntercept, quadrant, currentX, currentY) {
     var balls = getBallsInCorrectQuadrant(quadrant, currentX, currentY);
     var unachievableDistance = TABLE_WIDTH;
-    var currentShortestDistance = unachievableDistance;
-    var closestBallAndDistanceAndPerpendicularPoint = [ null, null, null ];
+    var currentClosestBall = { distanceBetweenCueAndBall: unachievableDistance };
+    var distanceBetweenCenterOfTwoBalls = BALL_RADIUS_VALUE * 2;
+    var foundIntersectingBall = null;
     for (var i = 0; i < balls.length; i++) {
       var ball = balls[i];
-      var distanceAndPoint = distanceFromCueTrajectory(ball, slope, yIntercept, currentX, currentY);
-      var distance = distanceAndPoint[0];
-      if (distance < currentShortestDistance) {
-        currentShortestDistance = distance;
-        closestBallAndDistanceAndPerpendicularPoint = [ball, currentShortestDistance, distanceAndPoint[1] ];
+      var ballData = getBallData(ball, slope, yIntercept, currentX, currentY);
+      if (ballData.distanceFromCueTrajectory < distanceBetweenCenterOfTwoBalls) {
+        if (ballData.distanceBetweenCueAndBall < currentClosestBall.distanceBetweenCueAndBall) {
+          currentClosestBall = ballData;
+          foundIntersectingBall = true;
+        }
       }
     }
-    var distanceBetweenCenterOfTwoBalls = BALL_RADIUS_VALUE * 2;
-    var foundIntersectingBall = currentShortestDistance < distanceBetweenCenterOfTwoBalls;
     if (foundIntersectingBall) {
-// put in function
-      var distanceBetweenContactPointAndPerpendicularPoint = getSideFromHypotenuseAndSide(distanceBetweenCenterOfTwoBalls, currentShortestDistance);
-      var perpendicularPoint = closestBallAndDistanceAndPerpendicularPoint[2];
-      var perpendicularPointX = perpendicularPoint[0];
-      var perpendicularPointY = perpendicularPoint[1];
-      var distanceBetweenCueAndPerpendicularPoint = getHypotenuseFromDifferences(perpendicularPointX - currentX, perpendicularPointY - currentY);
+      var distanceBetweenContactPointAndPerpendicularPoint = getSideFromHypotenuseAndSide(distanceBetweenCenterOfTwoBalls, ballData.distanceFromCueTrajectory);
+      var distanceBetweenCueAndPerpendicularPoint = getHypotenuseFromDifferences(ballData.perpendicularPointX - currentX, ballData.perpendicularPointY - currentY);
       var ratioBetweenTwoDistanceTriangles = distanceBetweenContactPointAndPerpendicularPoint / distanceBetweenCueAndPerpendicularPoint;
-      var ballCenterX = pixelLocationToNumericalValue(ball.style.cx);
-      var ballCenterY = pixelLocationToNumericalValue(ball.style.cy);
-      var xFromBallCenterToCueCenter = currentX - ballCenterX;
-      var yFromBallCenterToCueCenter = currentY - ballCenterY;
+      var xFromBallCenterToCueCenter = currentX - ballData.ballX;
+      var yFromBallCenterToCueCenter = currentY - ballData.ballY;
       var xFromBallCenterToContactCenter = ratioBetweenTwoDistanceTriangles * xFromBallCenterToCueCenter;
       var yFromBallCenterToContactCenter = ratioBetweenTwoDistanceTriangles * yFromBallCenterToCueCenter;
-      var result = [ perpendicularPointX + xFromBallCenterToContactCenter, perpendicularPointY + yFromBallCenterToContactCenter];
+      var result = [ ballData.perpendicularPointX + xFromBallCenterToContactCenter, ballData.perpendicularPointY + yFromBallCenterToContactCenter];
       return result;
     }
     else {
@@ -143,15 +137,23 @@
     }
   }
 
-  function distanceFromCueTrajectory(ball, slope, yIntercept, currentX, currentY) {
+  function getBallData(ball, slope, yIntercept, currentX, currentY) {
     var ballX = pixelLocationToNumericalValue(ball.style.cx);
     var ballY = pixelLocationToNumericalValue(ball.style.cy);
     var perpendicularSlope = (1 / slope) * -1;
     var yInterceptOfPerpendicularLine = ballY - (perpendicularSlope * ballX);
     var intersectionX = (yIntercept - yInterceptOfPerpendicularLine) / (perpendicularSlope - slope);
     var intersectionY = intersectionX * slope + yIntercept;
-    var distance = getHypotenuseFromDifferences(ballX - intersectionX, ballY - intersectionY);
-    return [ distance, [ intersectionX, intersectionY ] ];
+    var distanceFromCueTrajectory = getHypotenuseFromDifferences(ballX - intersectionX, ballY - intersectionY);
+    var distanceBetweenCueAndBall = getHypotenuseFromDifferences(ballX - currentX, ballY - currentY);
+    return {
+      distanceFromCueTrajectory: distanceFromCueTrajectory,
+      perpendicularPointX: intersectionX, 
+      perpendicularPointY: intersectionY,
+      distanceBetweenCueAndBall: distanceBetweenCueAndBall,
+      ballX: ballX,
+      ballY: ballY,
+    }
   }
 
   function getHypotenuseFromDifferences(x, y) {
