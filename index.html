@@ -29,29 +29,27 @@
 
   function setPredictedCueLocationListener() {
     document.addEventListener('mousemove', function(event) {
-      var location = getElementTableLocation([event.clientX, event.clientY]);
-      var x = location[0];
-      var y = location[1];
-      if (cursorOnTable(x, y)) {
+      var location = getElementTableLocation(event.clientX, event.clientY);
+      if (cursorOnTable(location.x, location.y)) {
         clearPreviousPredictedLocation();
-        placePredictedCueLocation(x, y);
+        placePredictedCueLocation(location.x, location.y);
       }
     });
   }
 
   function setClickListener() {
     document.addEventListener('click', function(event) {
-      setInitialCueBallMovementData(event.clientX, event.clientY);
+      var cursorLocationOnTable = getElementTableLocation(event.clientX, event.clientY);
+      setInitialCueBallMovementData(cursorLocationOnTable.x, cursorLocationOnTable.y);
       incrementLocationsOfBalls();
     });
   }
   
   function setInitialCueBallMovementData(cursorX, cursorY) {
     var cueBall = document.getElementById('cue');
-    var cueBallLocation = cueBall.getBoundingClientRect();
     cueBall.x = pixelLocationToNumericalValue(cueBall.style.cx);
     cueBall.y = pixelLocationToNumericalValue(cueBall.style.cy);
-    cueBall.slope = (cursorX - cueBall.x)  / (cursorY - cueBall.y);
+    cueBall.slope = (cursorY - cueBall.y) / (cursorX - cueBall.x);
     cueBall.direction = cursorX < cueBall.x ? 'left' : 'right';
     cueBall.distanceMovedPerIncrement = 5;
     cueBall.isMoving = true;
@@ -64,6 +62,8 @@
         var newLocation = calculateNewLocation(ball);
         ball.style.cx = newLocation.x + 'px';
         ball.style.cy = newLocation.y + 'px';
+        ball.x = newLocation.x;
+        ball.y = newLocation.y;
       }
     }
     setTimeout(function() {
@@ -118,25 +118,22 @@
 
   function placePredictedCueLocation(cursorX, cursorY) {
     var currentLocation = getElementTableLocationByID('cue');
-    var currentX = currentLocation[0];
-    var currentY = currentLocation[1];
-    var predictedLocation = getPredictedLocation(currentX, currentY, cursorX, cursorY);
-    var predictedX = predictedLocation[0];
-    var predictedY = predictedLocation[1];
-    placeBall('white', predictedX, predictedY, 'predicted');
+    var predictedLocation = getPredictedLocation(currentLocation.x, currentLocation.y, cursorX, cursorY);
+    placeBall('white', predictedLocation.x, predictedLocation.y, 'predicted');
   }
 
   function getElementTableLocationByID(id) {
     var element = document.getElementById(id);
-    var location = element.getBoundingClientRect();
-    return getElementTableLocation([ location.left, location.top ]);
+    var x = pixelLocationToNumericalValue(element.style.cx);
+    var y = pixelLocationToNumericalValue(element.style.cy);
+    return { x: x , y: y };
   }
 
-  function getElementTableLocation(location) {
+  function getElementTableLocation(x, y) {
     var tableLocation = document.getElementById('table').getBoundingClientRect();
-    var x = location[0] - tableLocation.left;
-    var y = location[1] - tableLocation.top;
-    return [x, y];
+    var x = x - tableLocation.left;
+    var y = y - tableLocation.top;
+    return { x: x, y: y };
   }
 
   function getPredictedLocation(currentX, currentY, cursorX, cursorY) {
@@ -175,8 +172,10 @@
       var yFromBallCenterToCueCenter = currentY - ballData.ballY;
       var xFromBallCenterToContactCenter = ratioBetweenTwoDistanceTriangles * xFromBallCenterToCueCenter;
       var yFromBallCenterToContactCenter = ratioBetweenTwoDistanceTriangles * yFromBallCenterToCueCenter;
-      var result = [ ballData.perpendicularPointX + xFromBallCenterToContactCenter, ballData.perpendicularPointY + yFromBallCenterToContactCenter];
-      return result;
+      return {
+        x: ballData.perpendicularPointX + xFromBallCenterToContactCenter,
+        y: ballData.perpendicularPointY + yFromBallCenterToContactCenter,
+      };
     }
     else {
       return false;
@@ -339,7 +338,10 @@
     }
     else {
       var x = xOfWall - BALL_RADIUS_VALUE;
-      return [ x, getY(x, slope, yIntercept) ];
+      return {
+        x: x,
+        y: getY(x, slope, yIntercept),
+      };
     }
   }
 
@@ -352,7 +354,10 @@
     }
     else {
       var y = yOfWall - BALL_RADIUS_VALUE;
-      return [ getX(y, slope, yIntercept), y ];
+      return {
+        x: getX(y, slope, yIntercept),
+        y: y,
+      };
     }
   }
 
@@ -365,7 +370,10 @@
     }
     else {
       var x = xOfWall + BALL_RADIUS_VALUE;
-      return [ x, getY(x, slope, yIntercept) ];
+      return {
+        x: x,
+        y: getY(x, slope, yIntercept),
+      };
     }
   }
 
@@ -378,7 +386,10 @@
     }
     else {
       var y = yOfWall + BALL_RADIUS_VALUE;
-      return [ getX(y, slope, yIntercept), y ];
+      return {
+        x: getX(y, slope, yIntercept),
+        y: y,
+      };
     }
   }
 
