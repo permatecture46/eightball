@@ -16,6 +16,7 @@
   var BALL_RADIUS = BALL_RADIUS_PERCENTAGE * 100 + "%";
   var TABLE_WIDTH, TABLE_HEIGHT, BALL_RADIUS_VALUE;
   var TIME_BETWEEN_INCREMENTS = 50;
+  var MAX_DISTANCE_MOVED = 10;
 
   var ballsOnTable = [];
 
@@ -51,7 +52,8 @@
     cueBall.y = pixelLocationToNumericalValue(cueBall.style.cy);
     cueBall.slope = (cursorY - cueBall.y) / (cursorX - cueBall.x);
     cueBall.direction = cursorX < cueBall.x ? 'left' : 'right';
-    cueBall.distanceMovedPerIncrement = 5;
+    cueBall.directionUpDown = cursorY > cueBall.y ? 'top' : 'bottom';
+    cueBall.distanceMovedPerIncrement = MAX_DISTANCE_MOVED;
     cueBall.isMoving = true;
   }
 
@@ -64,9 +66,63 @@
         ball.style.cy = newLocation.y + 'px';
         ball.x = newLocation.x;
         ball.y = newLocation.y;
+// put slow down code here
+        var ballReflecting = ballReflectingAgainstTable(ball);
+        if (ballReflecting) {
+          var newBallData = calculateBallDataAfterReflection(ballReflecting, ball.slope, ball.direction, ball.directionUpDown);
+          ball.slope = newBallData.slope;
+          ball.direction = newBallData.direction;
+          ball.directionUpDown = newBallData.directionUpDown;
+          // ball.distance change this later!
+        }
+        else if (false) {
+// reflecting against ball
+        }
       }
     }
     setTimeout(incrementLocationsOfBalls, TIME_BETWEEN_INCREMENTS);
+  }
+
+  function ballReflectingAgainstTable(ball) {
+    var distanceMoving = ball.distanceMovedPerIncrement;
+    if (ball.x < distanceMoving + BALL_RADIUS_VALUE && ball.direction == 'left') {
+      return 'horizontal';
+    }
+    else if (ball.x > (TABLE_WIDTH - (distanceMoving + BALL_RADIUS_VALUE)) && ball.direction == 'right') {
+      return 'horizontal';
+    }
+    else if (ball.y < distanceMoving + BALL_RADIUS_VALUE && ball.directionUpDown == 'bottom') {
+      return 'vertical';
+    }
+    else if (ball.y > (TABLE_HEIGHT - (distanceMoving + BALL_RADIUS_VALUE)) && ball.directionUpDown == 'top') {
+      return 'vertical';
+    }
+  }
+
+  function calculateBallDataAfterReflection(ballReflecting, slope, direction, directionUpDown) {
+    var result = {};
+    result.slope = -1 * slope;
+    if (ballReflecting == 'vertical') {
+      if (directionUpDown == 'top') {
+        result.direction = direction;
+        result.directionUpDown = 'bottom';
+      }
+      else if (directionUpDown == 'bottom') {
+        result.direction = direction;
+        result.directionUpDown = 'top';
+      }
+    }
+    else if (ballReflecting == 'horizontal') {
+      if (direction == 'left') {
+        result.directionUpDown = directionUpDown;
+        result.direction = 'right';
+      }
+      else if (direction == 'right') {
+        result.directionUpDown = directionUpDown;
+        result.direction = 'left';
+      }
+    }
+    return result;
   }
 
   function calculateNewLocation(ball) {
