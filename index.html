@@ -66,20 +66,15 @@
         ball.y = newLocation.y;
       }
     }
-    setTimeout(function() {
-// add set up because gets cleared
-      incrementLocationsOfBalls();
-    }, TIME_BETWEEN_INCREMENTS);
+    setTimeout(incrementLocationsOfBalls, TIME_BETWEEN_INCREMENTS);
   }
 
   function calculateNewLocation(ball) {
-    var ballComponentX = ball.direction == 'left' ? -1 : 1;
-    var ballComponentY = ball.slope * ballComponentX;
-    var distanceTraveledX = Math.sqrt(ball.distanceMovedPerIncrement / (1 + Math.pow(ballComponentY, 2)));
+    var distanceTraveledX = Math.sqrt(ball.distanceMovedPerIncrement / (1 + Math.pow(ball.slope, 2)));
     var distanceTraveledY = ball.slope * distanceTraveledX;
     return {
-      x: ball.x + distanceTraveledX,
-      y: ball.y + distanceTraveledY,
+      x: ball.x + distanceTraveledX * (ball.direction == 'left' ? -1 : 1),
+      y: ball.y + distanceTraveledY * (ball.direction == 'left' ? -1 : 1),
     };
   }
 
