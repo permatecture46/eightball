@@ -15,14 +15,15 @@
   var ACTUAL_BALL_RADIUS_PERCENTAGE = BALL_RADIUS_PERCENTAGE + .265 * BALL_RADIUS_PERCENTAGE; // for some reason this is how it renders...
   var BALL_RADIUS = BALL_RADIUS_PERCENTAGE * 100 + "%";
   var TABLE_WIDTH, TABLE_HEIGHT, BALL_RADIUS_VALUE;
-  var TIME_BETWEEN_INCREMENTS = 50;
-  var MAX_DISTANCE_MOVED = 10;
+  var TIME_BETWEEN_INCREMENTS = 5;
+  var MAX_DISTANCE_MOVED = 1;
+  var TEST_BALL_NUM = 1;
 
   var ballsOnTable = [];
 
   window.addEventListener('load', function(event) {
     setTableSizeVariables();
-    // ballsOnTable = placeRandomBalls();
+    ballsOnTable = placeRandomBalls();
     ballsOnTable.push(placeRandomBall());
     setPredictedCueLocationListener();
     setClickListener();
@@ -67,34 +68,94 @@
         ball.x = newLocation.x;
         ball.y = newLocation.y;
 // put slow down code here
-        var ballReflecting = ballReflectingAgainstTable(ball);
-        if (ballReflecting) {
-          var newBallData = calculateBallDataAfterReflection(ballReflecting, ball.slope, ball.direction, ball.directionUpDown);
+        var ballStruck = ballStrikingOtherBall(ball);
+        if (!!ballStruck) {
+          var newBallData = calculateBallDataAfterStriking(ball, ballStruck);
           ball.slope = newBallData.slope;
           ball.direction = newBallData.direction;
           ball.directionUpDown = newBallData.directionUpDown;
-          // ball.distance change this later!
+// fill me in
         }
-        else if (false) {
-// reflecting against ball
+        else {
+          var ballReflecting = ballReflectingAgainstTable(ball);
+          if (!!ballReflecting) { // implicit else if
+            var newBallData = calculateBallDataAfterReflection(ballReflecting, ball.slope, ball.direction, ball.directionUpDown);
+            ball.slope = newBallData.slope;
+            ball.direction = newBallData.direction;
+            ball.directionUpDown = newBallData.directionUpDown;
+            // ball.distance change this later!
+          }
         }
       }
     }
     setTimeout(incrementLocationsOfBalls, TIME_BETWEEN_INCREMENTS);
   }
 
+  function ballStrikingOtherBall(ball) {
+    for (var i = 0; i < ballsOnTable.length; i++) {
+      var ballToCheck = ballsOnTable[i];
+      if (ball != ballToCheck) {
+        var distanceBetweenBalls = getHypotenuseFromDifferences(ball.x - ballToCheck.x, ball.y - ballToCheck.y);
+        if (distanceBetweenBalls < 2 * BALL_RADIUS_VALUE) {
+          return ballToCheck;
+        }
+      }
+    }
+  }
+
+  function calculateBallDataAfterStriking(ball, ballStruck) {
+    var lineBetween = {};
+    lineBetween.slope = (ball.y - ballStruck.y) / (ball.x - ballStruck.x);
+    lineBetween.yIntercept = ball.y - lineBetween.slope * ball.x;
+    var newTrajectory = {};
+       // eq from StackOverflow: double M3 = ((2 * M1) + (M2 * pow(M1, 2)) - M2) / (2 * M1 * M2 - pow(M1, 2) + 1);
+    var newSlope = ((2 * lineBetween.slope) + (ball.slope * Math.pow(lineBetween.slope, 2)) - ball.slope) / ( 2 * lineBetween.slope * ball.slope - Math.pow(lineBetween.slope, 2) + 1);
+    newTrajectory.slope = newSlope;
+    var oldSlope = ball.slope;
+    var quadrant = getObjectQuadrant(ballStruck.x, ballStruck.y, ball.x, ball.y);
+    if (quadrant == 1) {
+      if (newSlope > 0) {
+        newTrajectory.directionUpDown = 'top';
+        newTrajectory.direction = 'right';
+      }
+      else if (oldSlope > 0) {
+        if (oldSlope > 1) {
+lz('A')
+          newTrajectory.direction = 'right';
+        }
+        else {
+lz('B')
+          newTrajectory.directionUpDown = 'top';
+        }
+      }
+    }
+    else if (quadrant == 2) {
+      newTrajectory.direction = 'left';
+      newTrajectory.directionUpDown = 'top';
+    }
+    else if (quadrant == 3) {
+      newTrajectory.direction = 'left';
+      newTrajectory.directionUpDown = 'bottom';
+    }
+    else if (quadrant == 4) {
+      newTrajectory.direction = 'right';
+      newTrajectory.directionUpDown = 'bottom';
+    }
+    return newTrajectory;
+  }
+
   function ballReflectingAgainstTable(ball) {
     var distanceMoving = ball.distanceMovedPerIncrement;
-    if (ball.x < distanceMoving + BALL_RADIUS_VALUE && ball.direction == 'left') {
+    if (ball.x < BALL_RADIUS_VALUE && ball.direction == 'left') {
       return 'horizontal';
     }
-    else if (ball.x > (TABLE_WIDTH - (distanceMoving + BALL_RADIUS_VALUE)) && ball.direction == 'right') {
+    else if (ball.x > (TABLE_WIDTH - (BALL_RADIUS_VALUE)) && ball.direction == 'right') {
       return 'horizontal';
     }
-    else if (ball.y < distanceMoving + BALL_RADIUS_VALUE && ball.directionUpDown == 'bottom') {
+    else if (ball.y < BALL_RADIUS_VALUE && ball.directionUpDown == 'bottom') {
       return 'vertical';
     }
-    else if (ball.y > (TABLE_HEIGHT - (distanceMoving + BALL_RADIUS_VALUE)) && ball.directionUpDown == 'top') {
+    else if (ball.y > (TABLE_HEIGHT - (BALL_RADIUS_VALUE)) && ball.directionUpDown == 'top') {
       return 'vertical';
     }
   }
@@ -127,10 +188,10 @@
 
   function calculateNewLocation(ball) {
     var distanceTraveledX = Math.sqrt(ball.distanceMovedPerIncrement / (1 + Math.pow(ball.slope, 2)));
-    var distanceTraveledY = ball.slope * distanceTraveledX;
+    var distanceTraveledY = Math.abs(ball.slope * distanceTraveledX);
     return {
       x: ball.x + distanceTraveledX * (ball.direction == 'left' ? -1 : 1),
-      y: ball.y + distanceTraveledY * (ball.direction == 'left' ? -1 : 1),
+      y: ball.y + distanceTraveledY * (ball.directionUpDown == 'bottom' ? -1 : 1),
     };
   }
 
@@ -170,7 +231,7 @@
   function placePredictedCueLocation(cursorX, cursorY) {
     var currentLocation = getElementTableLocationByID('cue');
     var predictedLocation = getPredictedLocation(currentLocation.x, currentLocation.y, cursorX, cursorY);
-    placeBall('white', predictedLocation.x, predictedLocation.y, 'predicted');
+    placeBall('white', predictedLocation.x + 'px', predictedLocation.y + 'px', 'predicted');
   }
 
   function getElementTableLocationByID(id) {
@@ -309,23 +370,27 @@
   }
 
   function getCursorQuadrant(currentX, currentY, cursorX, cursorY) {
+    return getObjectQuadrant(currentX, currentY, cursorX, cursorY);
+  }
+
+  function getObjectQuadrant(baseX, baseY, X, Y) {
     // NOTE: output corresponds to quadrants of cartesian graph; half-values for when cursor on line
-    if (cursorX < currentX) {
-      if (cursorY < currentY) {
+    if (X < baseX) {
+      if (Y < baseY) {
         return 3;
       }
-      else if (cursorY > currentY) {
+      else if (Y > baseY) {
         return 2;
       }
       else {
         return 2.5;
       }
     }
-    else if (cursorX > currentX) {
-      if (cursorY > currentY) {
+    else if (X > baseX) {
+      if (Y > baseY) {
         return 1;
       }
-      else if (cursorY < currentY) {
+      else if (Y < baseY) {
         return 4;
       }
       else {
@@ -333,10 +398,10 @@
       }
     }
     else {
-      if (cursorY > currentY) {
+      if (Y > baseY) {
         return 1.5;
       }
-      else if (cursorY < currentY) {
+      else if (Y < baseY) {
         return 3.5;
       }
       else {
@@ -465,7 +530,7 @@
 
   function placeRandomBalls() {
     var balls = [];
-    for (var i = 0; i < 3; i++) {
+    for (var i = 0; i < TEST_BALL_NUM; i++) {
       var ball = placeRandomBall('green', true);
       balls.push(ball);
     }
@@ -480,6 +545,8 @@
       element.style.r = BALL_RADIUS;
       element.style.cx = cx;
       element.style.cy = cy;
+      element.x = pixelLocationToNumericalValue(cx);
+      element.y = pixelLocationToNumericalValue(cy);
       if (id) element.id = id;
     });
     return ball;
