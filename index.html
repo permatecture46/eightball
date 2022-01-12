@@ -58,7 +58,7 @@
     cueBall.isMoving = true;
   }
 
-  function incrementLocationsOfBalls() {
+  function incrementLocationsOfBalls(ballJustStruck) {
     for (var i = 0; i < ballsOnTable.length; i++) {
       var ball = ballsOnTable[i];
       if (ball.isMoving) {
@@ -69,11 +69,12 @@
         ball.y = newLocation.y;
 // put slow down code here
         var ballStruck = ballStrikingOtherBall(ball);
-        if (!!ballStruck) {
+        if (!!ballStruck && !ballJustStruck) {
           var newBallData = calculateBallDataAfterStriking(ball, ballStruck);
           ball.slope = newBallData.slope;
           ball.direction = newBallData.direction;
           ball.directionUpDown = newBallData.directionUpDown;
+          ballJustStruck = true;
 // fill me in
         }
         else {
@@ -88,7 +89,9 @@
         }
       }
     }
-    setTimeout(incrementLocationsOfBalls, TIME_BETWEEN_INCREMENTS);
+    setTimeout(function() {
+      incrementLocationsOfBalls(ballJustStruck);
+    }, TIME_BETWEEN_INCREMENTS);
   }
 
   function ballStrikingOtherBall(ball) {
@@ -113,33 +116,37 @@
     newTrajectory.slope = newSlope;
     var oldSlope = ball.slope;
     var quadrant = getObjectQuadrant(ballStruck.x, ballStruck.y, ball.x, ball.y);
-    if (quadrant == 1) {
-      if (newSlope > 0) {
-        newTrajectory.directionUpDown = 'top';
+    if (newSlope > 0) {
+      if ((oldSlope > 0 && ball.direction == 'right' && quadrant == 1) || 
+         (oldSlope < 0 && ball.direction == 'right' && (quadrant == 2 || quadrant == 1)) ||
+         (oldSlope < 0 && ball.directionUpDown == 'top' && (quadrant == 4 || quadrant == 1))) 
+      {
         newTrajectory.direction = 'right';
+        newTrajectory.directionUpDown = 'top';
       }
-      else if (oldSlope > 0) {
-        if (oldSlope > 1) {
-lz('A')
-          newTrajectory.direction = 'right';
-        }
-        else {
-lz('B')
-          newTrajectory.directionUpDown = 'top';
-        }
+      else if ((oldSlope < 0 && ball.direction == 'left' && quadrant == 3) || 
+         (oldSlope > 0 && ball.direction == 'left' && (quadrant == 3 || quadrant == 4)) ||
+         (oldSlope > 0 && ball.directionUpDown == 'bottom' && (quadrant == 3 || quadrant == 2)))
+      {
+        newTrajectory.direction = 'left';
+        newTrajectory.directionUpDown = 'bottom';
       }
     }
-    else if (quadrant == 2) {
-      newTrajectory.direction = 'left';
-      newTrajectory.directionUpDown = 'top';
-    }
-    else if (quadrant == 3) {
-      newTrajectory.direction = 'left';
-      newTrajectory.directionUpDown = 'bottom';
-    }
-    else if (quadrant == 4) {
-      newTrajectory.direction = 'right';
-      newTrajectory.directionUpDown = 'bottom';
+    else if (newSlope < 0) {
+      if ((oldSlope < 0 && ball.direction == 'left' && quadrant == 2) || 
+         (oldSlope > 0 && ball.direction == 'left' && (quadrant == 2 || quadrant == 1) && (lineBetween.slope > 1)) ||
+         (oldSlope > 0 && ball.directionUpDown == 'top' && (quadrant == 2 || quadrant == 3))) 
+      {
+        newTrajectory.direction = 'left';
+        newTrajectory.directionUpDown = 'top';
+      }
+      else if ((oldSlope > 0 && ball.direction == 'right' && quadrant == 4) || 
+         (oldSlope < 0 && ball.direction == 'right' && (quadrant == 3 || quadrant == 4)) ||
+         (oldSlope < 0 && ball.directionUpDown == 'bottom' && (quadrant == 1 || quadrant == 4))) 
+      {
+        newTrajectory.direction = 'right';
+        newTrajectory.directionUpDown = 'bottom';
+      }
     }
     return newTrajectory;
   }
@@ -195,8 +202,8 @@ lz('B')
     };
   }
 
-  function lz(print, print2, print3, print4){
-    console.log(print, print2, print3, print4);
+  function lz(print, print2, print3, print4, print5){
+    console.log(print, print2, print3, print4, print5);
   }
 
   function clearPreviousPredictedLocation() {
