@@ -17,7 +17,7 @@
   var TABLE_WIDTH, TABLE_HEIGHT, BALL_RADIUS_VALUE;
   var TIME_BETWEEN_INCREMENTS = 5;
   var MAX_DISTANCE_MOVED = 1;
-  var TEST_BALL_NUM = 2;
+  var TEST_BALL_NUM = 1;
 
   var ballsOnTable = [];
 
@@ -389,7 +389,7 @@ lz('E')
   }
 
   function pixelLocationToNumericalValue(string) {
-    string = string.slice(0, -3);
+    string = string.slice(0, -2);
     return Number(string);
   }
 
@@ -543,7 +543,7 @@ lz('E')
 
   function placeRandomBall(color, multiple) {
     var randomX = Math.random() * (TABLE_WIDTH - BALL_RADIUS_VALUE * 2) + BALL_RADIUS_VALUE + 'px';
-    var randomY = 20 + 'px'; //Math.random() * (TABLE_HEIGHT - BALL_RADIUS_VALUE * 2) + BALL_RADIUS_VALUE + 'px';
+    var randomY = Math.random() * (TABLE_HEIGHT - BALL_RADIUS_VALUE * 2) + BALL_RADIUS_VALUE + 'px';
     if (!multiple) {
       return placeBall(color || 'red', randomX, randomY, 'cue');
     }
