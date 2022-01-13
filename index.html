@@ -15,7 +15,7 @@
   var ACTUAL_BALL_RADIUS_PERCENTAGE = BALL_RADIUS_PERCENTAGE + .265 * BALL_RADIUS_PERCENTAGE; // for some reason this is how it renders...
   var BALL_RADIUS = BALL_RADIUS_PERCENTAGE * 100 + "%";
   var TABLE_WIDTH, TABLE_HEIGHT, BALL_RADIUS_VALUE;
-  var TIME_BETWEEN_INCREMENTS = 5;
+  var TIME_BETWEEN_INCREMENTS = 15;
   var MAX_DISTANCE_MOVED = 1;
   var TEST_BALL_NUM = 1;
 
@@ -64,36 +64,23 @@
       var ballStruck;
       if (ball.isMoving) {
         var newLocation = calculateNewLocation(ball);
-        ball.style.cx = newLocation.x + 'px';
-        ball.style.cy = newLocation.y + 'px';
-        ball.x = newLocation.x;
-        ball.y = newLocation.y;
+        setNewLocation(ball, newLocation);
 // put slow down code here
         ballStruck = ballStrikingOtherBall(ball);
         if (!!ballStruck && !ball.ballJustStruck) {
           var newBallData = calculateBallDataAfterStriking(ball, ballStruck);
-          ball.slope = newBallData.slope;
-          ball.direction = newBallData.direction;
-          ball.directionUpDown = newBallData.directionUpDown;
+          setNewBallData(ball, newBallData);
           ball.ballJustStruck = true;
-          if (!ballStruck.isMoving) {
+          ballStruck.ballJustStruck = true;
+          if (!ballStruck.isMoving) { // redo slopes
+            ballStruck.isMoving = true;
             ballStruck.slope = newBallData.slopeBetweenBalls;
             var newBallStruckData = calculateBallDataAfterBeingStruck(ball, ballStruck);
-            ballStruck.direction = newBallStruckData.direction;
-            ballStruck.directionUpDown = newBallStruckData.directionUpDown;
-            ballStruck.distanceMovedPerIncrement = newBallStruckData.distanceMovedPerIncrement;
-            ballStruck.isMoving = true;
-            ballStruck.ballJustStruck = true;
-            var newLocation = calculateNewLocation(ballStruck);
-lz('new: ', newLocation);
-            ballStruck.style.cx = newLocation.x + 'px';
-            ballStruck.style.cy = newLocation.y + 'px';
-            ballStruck.x = newLocation.x;
-            ballStruck.y = newLocation.y;
+            setNewBallStruckData(ballStruck, newBallStruckData);
           }
           else {
-        
-// fill me
+            var newBallData = calculateBallDataAfterStriking(ballStruck, ball);
+            setNewBallData(ballStruck, newBallData);
           }
         }
         else {
@@ -102,9 +89,7 @@ lz('new: ', newLocation);
           var ballReflecting = ballReflectingAgainstTable(ball);
           if (!!ballReflecting) { // implicit else if
             var newBallData = calculateBallDataAfterReflection(ballReflecting, ball.slope, ball.direction, ball.directionUpDown);
-            ball.slope = newBallData.slope;
-            ball.direction = newBallData.direction;
-            ball.directionUpDown = newBallData.directionUpDown;
+            setNewBallData(ball, newBallData);
 // ball.distance change this later!
           }
         }
@@ -114,6 +99,50 @@ lz('new: ', newLocation);
     setTimeout(function() {
       incrementLocationsOfBalls();
     }, TIME_BETWEEN_INCREMENTS);
+  }
+
+
+  function findCommonDirection(ball1, ball2) {
+    if (ball1.direction == 'right' && ball2.direction == 'right') {
+      return 'right';
+    }
+    else if (ball1.direction == 'left' && ball2.direction == 'left') {
+      return 'left';
+    }
+  }
+
+  function reverseDirection(direction) {
+    if (direction == 'left') {
+      return 'right';
+    }
+    else if (direction == 'right') {
+      return 'left';
+    }
+    else if (direction == 'top') {
+      return 'bottom';
+    }
+    else if (direction == 'bottom') {
+      return 'top';
+    }
+  }
+
+  function setNewLocation(ball, newLocation) {
+    ball.style.cx = newLocation.x + 'px';
+    ball.style.cy = newLocation.y + 'px';
+    ball.x = newLocation.x;
+    ball.y = newLocation.y;
+  }
+
+  function setNewBallData(ball, newBallData) {
+    ball.slope = newBallData.slope;
+    ball.direction = newBallData.direction;
+    ball.directionUpDown = newBallData.directionUpDown;
+  }
+
+  function setNewBallStruckData(ballStruck, newBallStruckData) {
+    ballStruck.direction = newBallStruckData.direction;
+    ballStruck.directionUpDown = newBallStruckData.directionUpDown;
+    ballStruck.distanceMovedPerIncrement = newBallStruckData.distanceMovedPerIncrement;
   }
 
   function calculateBallDataAfterBeingStruck(ball, ballStruck) {
