@@ -58,10 +58,10 @@
     cueBall.isMoving = true;
   }
 
-  function incrementLocationsOfBalls(ballJustStruck) {
-    var ballStruck;
+  function incrementLocationsOfBalls() {
     for (var i = 0; i < ballsOnTable.length; i++) {
       var ball = ballsOnTable[i];
+      var ballStruck;
       if (ball.isMoving) {
         var newLocation = calculateNewLocation(ball);
         ball.style.cx = newLocation.x + 'px';
@@ -69,30 +69,77 @@
         ball.x = newLocation.x;
         ball.y = newLocation.y;
 // put slow down code here
-        var ballStruck = ballStrikingOtherBall(ball);
-        if (!!ballStruck && !ballJustStruck) {
+        ballStruck = ballStrikingOtherBall(ball);
+        if (!!ballStruck && !ball.ballJustStruck) {
           var newBallData = calculateBallDataAfterStriking(ball, ballStruck);
           ball.slope = newBallData.slope;
           ball.direction = newBallData.direction;
           ball.directionUpDown = newBallData.directionUpDown;
-          ballStruck = true;
-// fill me in
+          ball.ballJustStruck = true;
+          if (!ballStruck.isMoving) {
+            ballStruck.slope = newBallData.slopeBetweenBalls;
+            var newBallStruckData = calculateBallDataAfterBeingStruck(ball, ballStruck);
+            ballStruck.direction = newBallStruckData.direction;
+            ballStruck.directionUpDown = newBallStruckData.directionUpDown;
+            ballStruck.distanceMovedPerIncrement = newBallStruckData.distanceMovedPerIncrement;
+            ballStruck.isMoving = true;
+            ballStruck.ballJustStruck = true;
+            var newLocation = calculateNewLocation(ballStruck);
+lz('new: ', newLocation);
+            ballStruck.style.cx = newLocation.x + 'px';
+            ballStruck.style.cy = newLocation.y + 'px';
+            ballStruck.x = newLocation.x;
+            ballStruck.y = newLocation.y;
+          }
+          else {
+        
+// fill me
+          }
         }
         else {
+          ball.ballJustStruck = false;
+          if (ballStruck) ballStruck.ballJustStruck = false;
           var ballReflecting = ballReflectingAgainstTable(ball);
           if (!!ballReflecting) { // implicit else if
             var newBallData = calculateBallDataAfterReflection(ballReflecting, ball.slope, ball.direction, ball.directionUpDown);
             ball.slope = newBallData.slope;
             ball.direction = newBallData.direction;
             ball.directionUpDown = newBallData.directionUpDown;
-            // ball.distance change this later!
+// ball.distance change this later!
           }
         }
       }
     }
+    clearIncrementationNote(ballsOnTable);
     setTimeout(function() {
-      incrementLocationsOfBalls(ballStruck);
+      incrementLocationsOfBalls();
     }, TIME_BETWEEN_INCREMENTS);
+  }
+
+  function calculateBallDataAfterBeingStruck(ball, ballStruck) {
+    var newTrajectory = {};
+// change this to slow down:
+    newTrajectory.distanceMovedPerIncrement = ball.distanceMovedPerIncrement;
+    if (ball.x > ballStruck.x) { 
+      newTrajectory.direction = 'left';
+    }
+    else if (ball.x < ballStruck.x) {
+      newTrajectory.direction = 'right';
+    }
+    if (ball.y > ballStruck.y) { 
+      newTrajectory.directionUpDown = 'bottom';
+    }
+    else if (ball.y < ballStruck.y) {
+      newTrajectory.directionUpDown = 'top';
+    }
+    return newTrajectory;
+  }
+
+  function clearIncrementationNote(balls) {
+    for (var i = 0; i < balls.length; i++) {
+      var ball = balls[i];
+      ball.hasBeenIncremented = false;
+    }
   }
 
   function ballStrikingOtherBall(ball) {
@@ -112,6 +159,7 @@
     lineBetween.slope = (ball.y - ballStruck.y) / (ball.x - ballStruck.x);
     lineBetween.yIntercept = ball.y - lineBetween.slope * ball.x;
     var newTrajectory = {};
+    newTrajectory.slopeBetweenBalls = lineBetween.slope;
        // eq from StackOverflow: double M3 = ((2 * M1) + (M2 * pow(M1, 2)) - M2) / (2 * M1 * M2 - pow(M1, 2) + 1);
     var newSlope = ((2 * lineBetween.slope) + (ball.slope * Math.pow(lineBetween.slope, 2)) - ball.slope) / ( 2 * lineBetween.slope * ball.slope - Math.pow(lineBetween.slope, 2) + 1);
     newTrajectory.slope = newSlope;
