@@ -17,7 +17,7 @@
   var TABLE_WIDTH, TABLE_HEIGHT, BALL_RADIUS_VALUE;
   var TIME_BETWEEN_INCREMENTS = 15;
   var MAX_DISTANCE_MOVED = 1;
-  var TEST_BALL_NUM = 1;
+  var TEST_BALL_NUM = 2;
 
   var ballsOnTable = [];
 
@@ -25,6 +25,7 @@
     setTableSizeVariables();
     ballsOnTable = placeRandomBalls();
     ballsOnTable.push(placeRandomBall());
+    //ballsOnTable = placeNonrandomBalls();
     setPredictedCueLocationListener();
     setClickListener();
   });
@@ -62,7 +63,7 @@
     for (var i = 0; i < ballsOnTable.length; i++) {
       var ball = ballsOnTable[i];
       var ballStruck;
-      if (ball.isMoving) {
+      if (ball.isMoving && !ball.hasBeenIncremented) {
         var newLocation = calculateNewLocation(ball);
         setNewLocation(ball, newLocation);
 // put slow down code here
@@ -82,6 +83,7 @@
             var newBallData = calculateBallDataAfterStriking(ballStruck, ball);
             setNewBallData(ballStruck, newBallData);
           }
+          ballStruck.hasBeenIncremented = true;
         }
         else {
           ball.ballJustStruck = false;
@@ -378,16 +380,16 @@ lz('E')
       }
     }
     if (foundIntersectingBall) {
-      var distanceBetweenContactPointAndPerpendicularPoint = getSideFromHypotenuseAndSide(distanceBetweenCenterOfTwoBalls, ballData.distanceFromCueTrajectory);
-      var distanceBetweenCueAndPerpendicularPoint = getHypotenuseFromDifferences(ballData.perpendicularPointX - currentX, ballData.perpendicularPointY - currentY);
+      var distanceBetweenContactPointAndPerpendicularPoint = getSideFromHypotenuseAndSide(distanceBetweenCenterOfTwoBalls, currentClosestBall.distanceFromCueTrajectory);
+      var distanceBetweenCueAndPerpendicularPoint = getHypotenuseFromDifferences(currentClosestBall.perpendicularPointX - currentX, currentClosestBall.perpendicularPointY - currentY);
       var ratioBetweenTwoDistanceTriangles = distanceBetweenContactPointAndPerpendicularPoint / distanceBetweenCueAndPerpendicularPoint;
-      var xFromBallCenterToCueCenter = currentX - ballData.ballX;
-      var yFromBallCenterToCueCenter = currentY - ballData.ballY;
+      var xFromBallCenterToCueCenter = currentX - currentClosestBall.ballX;
+      var yFromBallCenterToCueCenter = currentY - currentClosestBall.ballY;
       var xFromBallCenterToContactCenter = ratioBetweenTwoDistanceTriangles * xFromBallCenterToCueCenter;
       var yFromBallCenterToContactCenter = ratioBetweenTwoDistanceTriangles * yFromBallCenterToCueCenter;
       return {
-        x: ballData.perpendicularPointX + xFromBallCenterToContactCenter,
-        y: ballData.perpendicularPointY + yFromBallCenterToContactCenter,
+        x: currentClosestBall.perpendicularPointX + xFromBallCenterToContactCenter,
+        y: currentClosestBall.perpendicularPointY + yFromBallCenterToContactCenter,
       };
     }
     else {
@@ -627,6 +629,14 @@ lz('E')
     else {
       return placeBall(color || 'red', randomX, randomY);
     }
+  }
+
+  function placeNonrandomBalls() {
+    var result = [];
+    result.push(placeBall('red', 324 + 'px', 83 + 'px', 'cue'));
+    result.push(placeBall('green', 223 + 'px', 138 + 'px'));
+    result.push(placeBall('green', 111 + 'px', 173 + 'px'));
+    return result;
   }
 
   function placeRandomBalls() {
