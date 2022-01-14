@@ -15,9 +15,9 @@
   var ACTUAL_BALL_RADIUS_PERCENTAGE = BALL_RADIUS_PERCENTAGE + .265 * BALL_RADIUS_PERCENTAGE; // for some reason this is how it renders...
   var BALL_RADIUS = BALL_RADIUS_PERCENTAGE * 100 + "%";
   var TABLE_WIDTH, TABLE_HEIGHT, BALL_RADIUS_VALUE;
-  var TIME_BETWEEN_INCREMENTS = 15;
+  var TIME_BETWEEN_INCREMENTS = 5;
   var MAX_DISTANCE_MOVED = 1;
-  var TEST_BALL_NUM = 2;
+  var TEST_BALL_NUM = 8;
 
   var ballsOnTable = [];
 
@@ -196,14 +196,11 @@
     newTrajectory.slope = newSlope;
     var oldSlope = ball.slope;
     var quadrant = getObjectQuadrant(ballStruck.x, ballStruck.y, ball.x, ball.y);
-if (quadrant != Math.abs(quadrant)) lz('BINGO! ! ! ! ! ! ! ! ! ! ! !')
-lz(newSlope, oldSlope, lineBetween.slope, ball.direction, ball.directionUpDown, quadrant)
     if (newSlope > 0) {
       if ((oldSlope > 0 && ball.direction == 'left' && quadrant == 1) || 
          (oldSlope < 0 && ball.direction == 'right' && (quadrant == 2 || quadrant == 1) && Math.abs(lineBetween.slope) > oldSlope) ||
          (oldSlope < 0 && ball.directionUpDown == 'top' && (quadrant == 4 || quadrant == 1) && lineBetween.slope > oldSlope)) 
       {
-lz('A')
         newTrajectory.direction = 'right';
         newTrajectory.directionUpDown = 'top';
       }
@@ -211,14 +208,12 @@ lz('A')
          (oldSlope < 0 && ball.direction == 'left' && (quadrant == 3 || quadrant == 4) && Math.abs(lineBetween.slope) > oldSlope) ||
          (oldSlope < 0 && ball.directionUpDown == 'bottom' && (quadrant == 3 || quadrant == 2) && lineBetween.slope > oldSlope))
       {
-lz('B')
         newTrajectory.direction = 'left';
         newTrajectory.directionUpDown = 'bottom';
       }
       else {
         newTrajectory.direction = ball.direction;
         newTrajectory.directionUpDown = ball.directionUpDown;
-lz('F');
       }
     }
     else if (newSlope < 0) {
@@ -226,7 +221,6 @@ lz('F');
          (oldSlope > 0 && ball.direction == 'left' && (quadrant == 2 || quadrant == 1) && (lineBetween.slope > oldSlope || lineBetween.slope < 0)) ||
          (oldSlope > 0 && ball.directionUpDown == 'top' && (quadrant == 2 || quadrant == 3) && lineBetween.slope < oldSlope))
       {
-lz('C')
         newTrajectory.direction = 'left';
         newTrajectory.directionUpDown = 'top';
       }
@@ -234,14 +228,12 @@ lz('C')
          (oldSlope > 0 && ball.direction == 'right' && (quadrant == 3 || quadrant == 4) && (lineBetween.slope > oldSlope || lineBetween.slope < 0)) ||
          (oldSlope > 0 && ball.directionUpDown == 'bottom' && (quadrant == 1 || quadrant == 4) && lineBetween.slope < oldSlope)) 
       {
-lz('D')
         newTrajectory.direction = 'right';
         newTrajectory.directionUpDown = 'bottom';
       }
       else {
         newTrajectory.direction = ball.direction;
         newTrajectory.directionUpDown = ball.directionUpDown;
-lz('E')
       }
     }
     return newTrajectory;
@@ -371,7 +363,7 @@ lz('E')
     var foundIntersectingBall = null;
     for (var i = 0; i < balls.length; i++) {
       var ball = balls[i];
-      var ballData = getBallData(ball, slope, yIntercept, currentX, currentY);
+      var ballData = getBallDataInRelationToCue(ball, slope, yIntercept, currentX, currentY);
       if (ballData.distanceFromCueTrajectory < distanceBetweenCenterOfTwoBalls) {
         if (ballData.distanceBetweenCueAndBall < currentClosestBall.distanceBetweenCueAndBall) {
           currentClosestBall = ballData;
@@ -397,9 +389,9 @@ lz('E')
     }
   }
 
-  function getBallData(ball, slope, yIntercept, currentX, currentY) {
-    var ballX = pixelLocationToNumericalValue(ball.style.cx);
-    var ballY = pixelLocationToNumericalValue(ball.style.cy);
+  function getBallDataInRelationToCue(ball, slope, yIntercept, currentX, currentY) {
+    var ballX = ball.x;
+    var ballY = ball.y;
     var perpendicularSlope = (1 / slope) * -1;
     var yInterceptOfPerpendicularLine = ballY - (perpendicularSlope * ballX);
     var intersectionX = (yIntercept - yInterceptOfPerpendicularLine) / (perpendicularSlope - slope);
@@ -436,30 +428,31 @@ lz('E')
   }
 
   function ballInCorrectQuadrant(ball, quadrant, currentX, currentY) {
-    var ballX = pixelLocationToNumericalValue(ball.style.cx);
-    var ballY = pixelLocationToNumericalValue(ball.style.cy);
-    if (quadrant == 1 && ballX > currentX && ballY > currentY) {
+    var ballX = ball.x;
+    var ballY = ball.y;
+    var allowance = BALL_RADIUS_VALUE * 2;
+    if (quadrant == 1 && ballX > currentX - allowance && ballY > currentY - allowance) {
       return true;
     }
-    else if (quadrant == 2 && ballX < currentX && ballY > currentY) {
+    else if (quadrant == 2 && ballX < currentX + allowance && ballY > currentY - allowance) {
       return true;
     }
-    else if (quadrant == 3 && ballX < currentX && ballY < currentY) {
+    else if (quadrant == 3 && ballX < currentX + allowance && ballY < currentY + allowance) {
       return true;
     }
-    else if (quadrant == 4 && ballX > currentX && ballY < currentY) {
+    else if (quadrant == 4 && ballX > currentX - allowance && ballY < currentY + allowance) {
       return true;
     }
-    else if (quadrant == 1.5 && ballX == currentX && ballY < currentY) {
+    else if (quadrant == 1.5 && Math.abs(ballX - currentX) < allowance && ballY < currentY) {
       return true;
     }
-    else if (quadrant == 2.5 && ballX < currentX && ballY == currentY) {
+    else if (quadrant == 2.5 && ballX < currentX && Math.abs(ballY - currentY) < allowance) {
       return true;
     }
-    else if (quadrant == 3.5 && ballX == currentX && ballY > currentY) {
+    else if (quadrant == 3.5 && Math.abs(ballX - currentX) < allowance && ballY > currentY) {
       return true;
     }
-    else if (quadrant == 4.5 && ballX > currentX && ballY == currentY) {
+    else if (quadrant == 4.5 && ballX > currentX && Math.abs(ballY - currentY) < allowance) {
       return true;
     }
     else {
@@ -633,9 +626,9 @@ lz('E')
 
   function placeNonrandomBalls() {
     var result = [];
-    result.push(placeBall('red', 324 + 'px', 83 + 'px', 'cue'));
-    result.push(placeBall('green', 223 + 'px', 138 + 'px'));
-    result.push(placeBall('green', 111 + 'px', 173 + 'px'));
+    result.push(placeBall('red', 82 + 'px', 49 + 'px', 'cue'));
+    result.push(placeBall('green', 167 + 'px', 43 + 'px'));
+    result.push(placeBall('green', 354 + 'px', 78 + 'px'));
     return result;
   }
 
