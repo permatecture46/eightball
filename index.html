@@ -41,8 +41,8 @@
   var MAX_DISTANCE_MOVED = 1;
   var TEST_BALL_NUM = 8;
 
-  var BOTTOM_LEFT_LEFT_CORNER_X = 193, BOTTOM_LEFT_LEFT_CORNER_Y = 131, BOTTOM_LEFT_RIGHT_CORNER_X = 168, BOTTOM_LEFT_RIGHT_CORNER_Y = 154;
-  
+  var CORNER_MIN_X  = 185, CORNER_MAX_X = 636, CORNER_MIN_Y = 105, CORNER_MAX_Y = 307;
+  var SIDE_MIN = 394, SIDE_MAX = 440;
 
   var ballsOnTable = [];
 
@@ -67,7 +67,7 @@
 
   function setClickListener() {
     document.addEventListener('click', function(event) {
-lz(event.clientX, event.clientY)
+lz(event.offsetX, event.offsetY)
       var cursorLocationOnTable = getElementTableLocation(adjustedPositionX(event.clientX), adjustedPositionY(event.clientY));
       setInitialCueBallMovementData(cursorLocationOnTable.x, cursorLocationOnTable.y);
       incrementLocationsOfBalls();
@@ -267,18 +267,21 @@ lz(event.clientX, event.clientY)
 
   function ballReflectingAgainstTable(ball) {
     var distanceMoving = ball.distanceMovedPerIncrement;
-    if (ball.x < TABLE_X + BALL_RADIUS_VALUE && ball.direction == 'left' && adjustedPositionY(ball.y) > BOTTOM_LEFT_RIGHT_CORNER_Y) {
-lz(adjustedPositionY(ball.y), BOTTOM_LEFT_RIGHT_CORNER_Y, TABLE_Y + BALL_RADIUS_VALUE)
-      return 'horizontal';
+    if (ball.y > CORNER_MIN_Y && ball.y < CORNER_MAX_Y) {
+      if (ball.x < TABLE_X + BALL_RADIUS_VALUE && ball.direction == 'left') {
+        return 'horizontal';
+      }
+      else if (ball.x > TABLE_X + TABLE_WIDTH - BALL_RADIUS_VALUE && ball.direction == 'right') {
+        return 'horizontal';
+      }
     }
-    else if (ball.x > TABLE_X + TABLE_WIDTH - BALL_RADIUS_VALUE && ball.direction == 'right') {
-      return 'horizontal';
-    }
-    else if (ball.y < TABLE_Y + BALL_RADIUS_VALUE && ball.directionUpDown == 'bottom' && adjustedPositionX(ball.x) > BOTTOM_LEFT_LEFT_CORNER_X) {
-      return 'vertical';
-    }
-    else if (ball.y > TABLE_Y + TABLE_HEIGHT - BALL_RADIUS_VALUE && ball.directionUpDown == 'top') {
-      return 'vertical';
+    if (ball.x > CORNER_MIN_X && ball.x < CORNER_MAX_X && !(ball.x > SIDE_MIN && ball.x < SIDE_MAX)) {
+      if (ball.y < TABLE_Y + BALL_RADIUS_VALUE && ball.directionUpDown == 'bottom') {
+        return 'vertical';
+      }
+      else if (ball.y > TABLE_Y + TABLE_HEIGHT - BALL_RADIUS_VALUE && ball.directionUpDown == 'top') {
+        return 'vertical';
+      }
     }
   }
 
