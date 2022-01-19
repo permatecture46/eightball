@@ -124,7 +124,7 @@ lz(event.offsetX, event.offsetY)
             setNewBallData(ballStruck, newBallData);
           }
           ballStruck.hasBeenIncremented = true;
-          standardBallMovementDecrease(ball);
+          ballMovementDecrease(ball, DECREASE_UPON_REFLECTION_FACTOR);
         }
         else {
           ball.ballJustStruck = false;
@@ -133,7 +133,7 @@ lz(event.offsetX, event.offsetY)
           if (!!ballReflecting) { // implicit else if
             var newBallData = calculateBallDataAfterReflection(ballReflecting, ball.slope, ball.direction, ball.directionUpDown);
             setNewBallData(ball, newBallData);
-            standardBallMovementDecrease(ball);
+            ballMovementDecrease(ball, DECREASE_UPON_REFLECTION_FACTOR);
           }
           else if (isBallInLane(ball)) {
             var closestHole = findClosestHole(ball);
@@ -147,7 +147,7 @@ lz(event.offsetX, event.offsetY)
                 var newBallData = calculateBallDataAfterLaneReflection(ball, closestHole.name, reflectingRail);
                 setNewBallData(ball, newBallData);
                 ball.reflecting = true;
-                standardBallMovementDecrease(ball);
+                ballMovementDecrease(ball, DECREASE_UPON_REFLECTION_FACTOR);
               }
               else { 
                 ball.reflecting = false;
@@ -158,8 +158,7 @@ lz(event.offsetX, event.offsetY)
           }
         }
       }
-           // so that it slows down slower before it stops completely:
-      ball.distanceMovedPerIncrement -= DISTANCE_MOVED_DECREASE_FACTOR * ball.distanceMovedPerIncrement; 
+      ballMovementDecrease(ball, DISTANCE_MOVED_DECREASE_FACTOR); // so that it slows down slower before it stops completely:
     }
     clearIncrementationNote(ballsOnTable);
     setTimeout(function() {
@@ -167,10 +166,13 @@ lz(event.offsetX, event.offsetY)
     }, TIME_BETWEEN_INCREMENTS);
   }
   
-  function standardBallMovementDecrease(ball) {
-    ball.distanceMovedPerIncrement -= DECREASE_UPON_REFLECTION_FACTOR * ball.distanceMovedPerIncrement;
-    if (ball.distanceMovedPerIncrement <= 0) {
-      ball.isMoving = false;
+  function ballMovementDecrease(ball, factor) {
+    if (ball.distanceMovedPerIncrement) {
+      ball.distanceMovedPerIncrement -= factor * ball.distanceMovedPerIncrement;
+      if (ball.distanceMovedPerIncrement <= .001) {
+        ball.distanceMovedPerIncrement = 0;
+        ball.isMoving = false;
+      }
     }
   }
 
