@@ -45,6 +45,7 @@
   var SIDE_MIN, SIDE_MAX;
   var SCREEN_X, SCREEN_Y;
   var CORNER_LANE_SLOPE = 1, CORNER_LANE_SLOPE_2 = -1;
+  var SIDE_LANE_SLOPE = 2.145;
 
   var BOTTOM_LEFT_HOLE_X, BOTTOM_LEFT_HOLE_Y, BOTTOM_RIGHT_HOLE_X, BOTTOM_RIGHT_HOLE_Y;
   var TOP_LEFT_HOLE_X, TOP_LEFT_HOLE_Y, TOP_RIGHT_HOLE_X, TOP_RIGHT_HOLE_Y;
@@ -167,7 +168,7 @@ lz('setting false')
     var result = {}
     if (lane == 'BOTTOM_LEFT') {
       if (rail == 'left') {
-        result.slope = getSlopeReflectingAcrossSlope(ball.slope, -1 / CORNER_LANE_SLOPE);
+        result.slope = getSlopeReflectingAcrossSlope(ball.slope, -1 * CORNER_LANE_SLOPE);
         result.direction = 'left';
         if (result.slope > 0) {
           result.directionUpDown = 'bottom';
@@ -177,7 +178,7 @@ lz('setting false')
         }
       }
       else if (rail == 'right') {
-        result.slope = getSlopeReflectingAcrossSlope(ball.slope, -1 / CORNER_LANE_SLOPE);
+        result.slope = getSlopeReflectingAcrossSlope(ball.slope, -1 * CORNER_LANE_SLOPE);
         result.directionUpDown = 'bottom';
         if (result.slope > 0) {
           result.direction = 'left';
@@ -189,7 +190,7 @@ lz('setting false')
     }
     if (lane == 'BOTTOM_RIGHT') {
       if (rail == 'left') {
-        result.slope = getSlopeReflectingAcrossSlope(ball.slope, -1 / CORNER_LANE_SLOPE);
+        result.slope = getSlopeReflectingAcrossSlope(ball.slope, CORNER_LANE_SLOPE);
         result.directionUpDown = 'bottom';
         if (result.slope > 0) {
           result.direction = 'left';
@@ -199,7 +200,7 @@ lz('setting false')
         }
       }
       else if (rail == 'right') {
-        result.slope = getSlopeReflectingAcrossSlope(ball.slope, -1 / CORNER_LANE_SLOPE);
+        result.slope = getSlopeReflectingAcrossSlope(ball.slope, CORNER_LANE_SLOPE);
         result.direction = 'right';
         if (result.slope > 0) {
           result.directionUpDown = 'bottom';
@@ -211,7 +212,7 @@ lz('setting false')
     }
     if (lane == 'TOP_RIGHT') {
       if (rail == 'right') {
-        result.slope = getSlopeReflectingAcrossSlope(ball.slope, -1 / CORNER_LANE_SLOPE);
+        result.slope = getSlopeReflectingAcrossSlope(ball.slope, -1 * CORNER_LANE_SLOPE);
         result.directionUpDown = 'top';
         if (result.slope > 0) {
           result.direction = 'right';
@@ -221,7 +222,7 @@ lz('setting false')
         }
       }
       else if (rail == 'left') {
-        result.slope = getSlopeReflectingAcrossSlope(ball.slope, -1 / CORNER_LANE_SLOPE);
+        result.slope = getSlopeReflectingAcrossSlope(ball.slope, -1 * CORNER_LANE_SLOPE);
         result.direction = 'right';
         if (result.slope > 0) {
           result.directionUpDown = 'top';
@@ -233,7 +234,7 @@ lz('setting false')
     }
     if (lane == 'TOP_LEFT') {
       if (rail == 'right') {
-        result.slope = getSlopeReflectingAcrossSlope(ball.slope, -1 / CORNER_LANE_SLOPE);
+        result.slope = getSlopeReflectingAcrossSlope(ball.slope, CORNER_LANE_SLOPE);
         result.direction = 'left';
         if (result.slope > 0) {
           result.directionUpDown = 'top';
@@ -243,13 +244,57 @@ lz('setting false')
         }
       }
       else if (rail == 'left') {
-        result.slope = getSlopeReflectingAcrossSlope(ball.slope, -1 / CORNER_LANE_SLOPE);
+        result.slope = getSlopeReflectingAcrossSlope(ball.slope, CORNER_LANE_SLOPE);
         result.directionUpDown = 'top';
         if (result.slope > 0) {
           result.direction = 'right';
         }
         else {
           result.direction = 'left';
+        }
+      }
+    }
+    if (lane == 'BOTTOM_SIDE') {
+      if (rail == 'right') {
+        result.slope = getSlopeReflectingAcrossSlope(ball.slope, -1 / (-1 * SIDE_LANE_SLOPE));
+        result.direction = 'right';
+        if (result.slope > 0) {
+          result.directionUpDown = 'top';
+        }
+        else {
+          result.directionUpDown = 'bottom';
+        }
+      }
+      else if (rail == 'left') {
+        result.slope = getSlopeReflectingAcrossSlope(ball.slope, -1 / SIDE_LANE_SLOPE);
+        result.direction = 'left';
+        if (result.slope > 0) {
+          result.directionUpDown = 'bottom';
+        }
+        else {
+          result.directionUpDown = 'top';
+        }
+      }
+    }
+    if (lane == 'TOP_SIDE') {
+      if (rail == 'right') {
+        result.slope = getSlopeReflectingAcrossSlope(ball.slope, -1 / (-1 * SIDE_LANE_SLOPE));
+        result.direction = 'left';
+        if (result.slope > 0) {
+          result.directionUpDown = 'bottom';
+        }
+        else {
+          result.directionUpDown = 'top';
+        }
+      }
+      else if (rail == 'left') {
+        result.slope = getSlopeReflectingAcrossSlope(ball.slope, -1 / SIDE_LANE_SLOPE);
+        result.direction = 'right';
+        if (result.slope > 0) {
+          result.directionUpDown = 'top';
+        }
+        else {
+          result.directionUpDown = 'bottom';
         }
       }
     }
@@ -293,6 +338,26 @@ lz('setting false')
         return 'right';
       }
       distance = distanceFromLine(ball.x, ball.y, CORNER_LANE_SLOPE_2, TABLE_X, CORNER_MAX_Y);
+      if (distance < BALL_RADIUS_VALUE) {
+        return 'left';
+      }
+    }
+    else if (lane == 'BOTTOM_SIDE') {
+      var distance = distanceFromLine(ball.x, ball.y, SIDE_LANE_SLOPE, SIDE_MAX, TABLE_Y);
+      if (distance < BALL_RADIUS_VALUE) {
+        return 'left';
+      }
+      var distance = distanceFromLine(ball.x, ball.y, -1 * SIDE_LANE_SLOPE, SIDE_MIN, TABLE_Y);
+      if (distance < BALL_RADIUS_VALUE) {
+        return 'right';
+      }
+    }
+    else if (lane == 'TOP_SIDE') {
+      var distance = distanceFromLine(ball.x, ball.y, SIDE_LANE_SLOPE, SIDE_MAX, TABLE_Y + TABLE_HEIGHT);
+      if (distance < BALL_RADIUS_VALUE) {
+        return 'right';
+      }
+      var distance = distanceFromLine(ball.x, ball.y, -1 * SIDE_LANE_SLOPE, SIDE_MIN, TABLE_Y + TABLE_HEIGHT);
       if (distance < BALL_RADIUS_VALUE) {
         return 'left';
       }
