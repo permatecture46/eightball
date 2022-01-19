@@ -33,12 +33,12 @@
 </body>
 <script>
 
-  var BALL_RADIUS_PERCENTAGE = .017; // .0205; // this value makes it so it becomes the actual American standard of ~.026
+  var BALL_RADIUS_PERCENTAGE = .015; // .0205; // this value makes it so it becomes the actual American standard of ~.026
   var ACTUAL_BALL_RADIUS_PERCENTAGE = BALL_RADIUS_PERCENTAGE + .265 * BALL_RADIUS_PERCENTAGE; // for some reason this is how it renders...
   var BALL_RADIUS = BALL_RADIUS_PERCENTAGE * 100 + "%";
   var TABLE_WIDTH, TABLE_HEIGHT, TABLE_X, TABLE_Y, BALL_RADIUS_VALUE;
-  var TIME_BETWEEN_INCREMENTS = 5;
-  var MAX_DISTANCE_MOVED = 1;
+  var TIME_BETWEEN_INCREMENTS = 1;
+  var MAX_DISTANCE_MOVED = 10;
   var TEST_BALL_NUM = 8;
 
   var CORNER_MIN_X, CORNER_MAX_X, CORNER_MIN_Y, CORNER_MAX_Y;
@@ -52,6 +52,8 @@
   var BOTTOM_SIDE_HOLE_X, BOTTOM_SIDE_HOLE_Y;
   var TOP_SIDE_HOLE_X, TOP_SIDE_HOLE_Y;
   var SIDE_HOLE_RADIUS, CORNER_HOLE_RADIUS;
+
+  var DISTANCE_MOVED_DECREASE_FACTOR = .01, DECREASE_UPON_REFLECTION_FACTOR = .5;
 
   var HOLE_RANGE = 100;
 
@@ -105,7 +107,6 @@ lz(event.offsetX, event.offsetY)
       if (ball.isMoving && !ball.hasBeenIncremented) {
         var newLocation = calculateNewLocation(ball);
         setNewLocation(ball, newLocation);
-// put slow down code here
         ballStruck = ballStrikingOtherBall(ball);
         if (!!ballStruck && !ball.ballJustStruck) {
           var newBallData = calculateBallDataAfterStriking(ball, ballStruck);
@@ -123,6 +124,7 @@ lz(event.offsetX, event.offsetY)
             setNewBallData(ballStruck, newBallData);
           }
           ballStruck.hasBeenIncremented = true;
+          standardBallMovementDecrease(ball);
         }
         else {
           ball.ballJustStruck = false;
@@ -131,7 +133,7 @@ lz(event.offsetX, event.offsetY)
           if (!!ballReflecting) { // implicit else if
             var newBallData = calculateBallDataAfterReflection(ballReflecting, ball.slope, ball.direction, ball.directionUpDown);
             setNewBallData(ball, newBallData);
-// ball.distance change this later!
+            standardBallMovementDecrease(ball);
           }
           else if (isBallInLane(ball)) {
             var closestHole = findClosestHole(ball);
@@ -144,24 +146,32 @@ lz(event.offsetX, event.offsetY)
               if (!!reflectingRail) {
                 var newBallData = calculateBallDataAfterLaneReflection(ball, closestHole.name, reflectingRail);
                 setNewBallData(ball, newBallData);
-lz('setting true')
                 ball.reflecting = true;
+                standardBallMovementDecrease(ball);
               }
               else { 
                 ball.reflecting = false;
               }
             }
             else {
-lz('setting false')
             }
           }
         }
       }
+           // so that it slows down slower before it stops completely:
+      ball.distanceMovedPerIncrement -= DISTANCE_MOVED_DECREASE_FACTOR * ball.distanceMovedPerIncrement; 
     }
     clearIncrementationNote(ballsOnTable);
     setTimeout(function() {
       incrementLocationsOfBalls();
     }, TIME_BETWEEN_INCREMENTS);
+  }
+  
+  function standardBallMovementDecrease(ball) {
+    ball.distanceMovedPerIncrement -= DECREASE_UPON_REFLECTION_FACTOR * ball.distanceMovedPerIncrement;
+    if (ball.distanceMovedPerIncrement <= 0) {
+      ball.isMoving = false;
+    }
   }
 
   function calculateBallDataAfterLaneReflection(ball, lane, rail) {
@@ -429,7 +439,7 @@ lz('setting false')
         radius: SIDE_HOLE_RADIUS,
       };
     }
-    return {}
+    return {};
   }
 
   function getDistance(x1, y1, x2, y2) {
@@ -491,8 +501,7 @@ lz('setting false')
 
   function calculateBallDataAfterBeingStruck(ball, ballStruck) {
     var newTrajectory = {};
-// change this to slow down:
-    newTrajectory.distanceMovedPerIncrement = ball.distanceMovedPerIncrement;
+    newTrajectory.distanceMovedPerIncrement = ball.distanceMovedPerIncrement * DECREASE_UPON_REFLECTION_FACTOR;
     if (ball.x > ballStruck.x) { 
       newTrajectory.direction = 'left';
     }
