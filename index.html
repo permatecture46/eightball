@@ -44,12 +44,15 @@
   var CORNER_MIN_X, CORNER_MAX_X, CORNER_MIN_Y, CORNER_MAX_Y;
   var SIDE_MIN, SIDE_MAX;
   var SCREEN_X, SCREEN_Y;
+  var CORNER_LANE_SLOPE = 1, CORNER_LANE_SLOPE_2 = -1;
 
   var BOTTOM_LEFT_HOLE_X, BOTTOM_LEFT_HOLE_Y, BOTTOM_RIGHT_HOLE_X, BOTTOM_RIGHT_HOLE_Y;
   var TOP_LEFT_HOLE_X, TOP_LEFT_HOLE_Y, TOP_RIGHT_HOLE_X, TOP_RIGHT_HOLE_Y;
   var BOTTOM_SIDE_HOLE_X, BOTTOM_SIDE_HOLE_Y;
   var TOP_SIDE_HOLE_X, TOP_SIDE_HOLE_Y;
   var SIDE_HOLE_RADIUS, CORNER_HOLE_RADIUS;
+
+  var HOLE_RANGE = 100;
 
   var ballsOnTable = [];
 
@@ -130,9 +133,25 @@ lz(event.offsetX, event.offsetY)
 // ball.distance change this later!
           }
           else if (isBallInLane(ball)) {
-            if (isBallInHole(ball)) {
+            var closestHole = findClosestHole(ball);
+            if (closestHole.distance && closestHole.distance < closestHole.radius) {
               removeBallFromWorkingSet(ball);
               ball.parentNode.removeChild(ball);
+            }
+            else if (!ball.reflecting) {
+              var reflectingRail = isBallAgainstRail(ball, closestHole.name);
+              if (!!reflectingRail) {
+                var newBallData = calculateBallDataAfterLaneReflection(ball, closestHole.name, reflectingRail);
+                setNewBallData(ball, newBallData);
+lz('setting true')
+                ball.reflecting = true;
+              }
+              else { 
+                ball.reflecting = false;
+              }
+            }
+            else {
+lz('setting false')
             }
           }
         }
@@ -144,31 +163,208 @@ lz(event.offsetX, event.offsetY)
     }, TIME_BETWEEN_INCREMENTS);
   }
 
+  function calculateBallDataAfterLaneReflection(ball, lane, rail) {
+    var result = {}
+    if (lane == 'BOTTOM_LEFT') {
+      if (rail == 'left') {
+        result.slope = getSlopeReflectingAcrossSlope(ball.slope, -1 / CORNER_LANE_SLOPE);
+        result.direction = 'left';
+        if (result.slope > 0) {
+          result.directionUpDown = 'bottom';
+        }
+        else {
+          result.directionUpDown = 'top';
+        }
+      }
+      else if (rail == 'right') {
+        result.slope = getSlopeReflectingAcrossSlope(ball.slope, -1 / CORNER_LANE_SLOPE);
+        result.directionUpDown = 'bottom';
+        if (result.slope > 0) {
+          result.direction = 'left';
+        }
+        else {
+          result.direction = 'right';
+        }
+      }
+    }
+    if (lane == 'BOTTOM_RIGHT') {
+      if (rail == 'left') {
+        result.slope = getSlopeReflectingAcrossSlope(ball.slope, -1 / CORNER_LANE_SLOPE);
+        result.directionUpDown = 'bottom';
+        if (result.slope > 0) {
+          result.direction = 'left';
+        }
+        else {
+          result.direction = 'right';
+        }
+      }
+      else if (rail == 'right') {
+        result.slope = getSlopeReflectingAcrossSlope(ball.slope, -1 / CORNER_LANE_SLOPE);
+        result.direction = 'right';
+        if (result.slope > 0) {
+          result.directionUpDown = 'bottom';
+        }
+        else {
+          result.directionUpDown = 'top';
+        }
+      }
+    }
+    if (lane == 'TOP_RIGHT') {
+      if (rail == 'right') {
+        result.slope = getSlopeReflectingAcrossSlope(ball.slope, -1 / CORNER_LANE_SLOPE);
+        result.directionUpDown = 'top';
+        if (result.slope > 0) {
+          result.direction = 'right';
+        }
+        else {
+          result.direction = 'left';
+        }
+      }
+      else if (rail == 'left') {
+        result.slope = getSlopeReflectingAcrossSlope(ball.slope, -1 / CORNER_LANE_SLOPE);
+        result.direction = 'right';
+        if (result.slope > 0) {
+          result.directionUpDown = 'top';
+        }
+        else {
+          result.directionUpDown = 'bottom';
+        }
+      }
+    }
+    if (lane == 'TOP_LEFT') {
+      if (rail == 'right') {
+        result.slope = getSlopeReflectingAcrossSlope(ball.slope, -1 / CORNER_LANE_SLOPE);
+        result.direction = 'left';
+        if (result.slope > 0) {
+          result.directionUpDown = 'top';
+        }
+        else {
+          result.directionUpDown = 'bottom';
+        }
+      }
+      else if (rail == 'left') {
+        result.slope = getSlopeReflectingAcrossSlope(ball.slope, -1 / CORNER_LANE_SLOPE);
+        result.directionUpDown = 'top';
+        if (result.slope > 0) {
+          result.direction = 'right';
+        }
+        else {
+          result.direction = 'left';
+        }
+      }
+    }
+    return result;
+  }
+
+  function isBallAgainstRail(ball, lane) {
+    if (lane == 'BOTTOM_LEFT') {
+      var distance = distanceFromLine(ball.x, ball.y, CORNER_LANE_SLOPE, CORNER_MIN_X, TABLE_Y);
+      if (distance < BALL_RADIUS_VALUE) {
+        return 'left';
+      }
+      distance = distanceFromLine(ball.x, ball.y, CORNER_LANE_SLOPE, TABLE_X, CORNER_MIN_Y);
+      if (distance < BALL_RADIUS_VALUE) {
+        return 'right';
+      }
+    }
+    else if (lane == 'BOTTOM_RIGHT') {
+      var distance = distanceFromLine(ball.x, ball.y, CORNER_LANE_SLOPE_2, CORNER_MAX_X, TABLE_Y);
+      if (distance < BALL_RADIUS_VALUE) {
+        return 'right';
+      }
+      distance = distanceFromLine(ball.x, ball.y, CORNER_LANE_SLOPE_2, TABLE_X + TABLE_WIDTH, CORNER_MIN_Y);
+      if (distance < BALL_RADIUS_VALUE) {
+        return 'left';
+      }
+    }
+    else if (lane == 'TOP_RIGHT') {
+      var distance = distanceFromLine(ball.x, ball.y, CORNER_LANE_SLOPE, CORNER_MAX_X, TABLE_Y + TABLE_HEIGHT);
+      if (distance < BALL_RADIUS_VALUE) {
+        return 'left';
+      }
+      distance = distanceFromLine(ball.x, ball.y, CORNER_LANE_SLOPE, TABLE_X + TABLE_WIDTH, CORNER_MAX_Y);
+      if (distance < BALL_RADIUS_VALUE) {
+        return 'right';
+      }
+    }
+    else if (lane == 'TOP_LEFT') {
+      var distance = distanceFromLine(ball.x, ball.y, CORNER_LANE_SLOPE_2, CORNER_MIN_X, TABLE_Y + TABLE_HEIGHT);
+      if (distance < BALL_RADIUS_VALUE) {
+        return 'right';
+      }
+      distance = distanceFromLine(ball.x, ball.y, CORNER_LANE_SLOPE_2, TABLE_X, CORNER_MAX_Y);
+      if (distance < BALL_RADIUS_VALUE) {
+        return 'left';
+      }
+    }
+  }
+
+  function distanceFromLine(ballX, ballY, laneSlope, laneX, laneY) {
+    var yIntLane = laneY - laneSlope * laneX;
+    var perpendicularSlope = -1 / laneSlope;
+    var yIntPerpendicularLine = ballY - perpendicularSlope * ballX;
+    var intersectionX = (yIntLane - yIntPerpendicularLine) / (perpendicularSlope - laneSlope);
+    var intersectionY = intersectionX * laneSlope + yIntLane;
+    var distance = getDistance(ballX, ballY, intersectionX, intersectionY);
+    return distance;
+  }
+
   function isBallInLane(ball) {
     if (ball.x < TABLE_X || ball.y < TABLE_Y || ball.x > TABLE_X + TABLE_WIDTH || ball.y > TABLE_Y + TABLE_HEIGHT) {
       return true;
     }
   }
 
-  function isBallInHole(ball){
-    if (getDistance(BOTTOM_LEFT_X, BOTTOM_LEFT_Y, ball.x, ball.y) < CORNER_HOLE_RADIUS) {
-      return true;
+  function findClosestHole(ball) {
+    var distance = getDistance(BOTTOM_LEFT_X, BOTTOM_LEFT_Y, ball.x, ball.y);
+    if (distance < HOLE_RANGE) {
+      return {
+        name: 'BOTTOM_LEFT',
+        distance: distance,
+        radius: CORNER_HOLE_RADIUS,
+      };
     }
-    else if (getDistance(BOTTOM_RIGHT_X, BOTTOM_RIGHT_Y, ball.x, ball.y) < CORNER_HOLE_RADIUS) {
-      return true;
+    var distance = getDistance(BOTTOM_RIGHT_X, BOTTOM_RIGHT_Y, ball.x, ball.y);
+    if (distance < HOLE_RANGE) {
+      return {
+        name: 'BOTTOM_RIGHT',
+        distance: distance,
+        radius: CORNER_HOLE_RADIUS,
+      };
     }
-    else if (getDistance(TOP_LEFT_X, TOP_LEFT_Y, ball.x, ball.y) < CORNER_HOLE_RADIUS) {
-      return true;
+    var distance = getDistance(TOP_RIGHT_X, TOP_RIGHT_Y, ball.x, ball.y);
+    if (distance < HOLE_RANGE) {
+      return {
+        name: 'TOP_RIGHT',
+        distance: distance,
+        radius: CORNER_HOLE_RADIUS,
+      };
     }
-    else if (getDistance(TOP_RIGHT_X, TOP_RIGHT_Y, ball.x, ball.y) < CORNER_HOLE_RADIUS) {
-      return true;
+    var distance = getDistance(TOP_LEFT_X, TOP_LEFT_Y, ball.x, ball.y);
+    if (distance < HOLE_RANGE) {
+      return {
+        name: 'TOP_LEFT',
+        distance: distance,
+        radius: CORNER_HOLE_RADIUS,
+      };
     }
-    else if (getDistance(BOTTOM_SIDE_X, BOTTOM_SIDE_Y, ball.x, ball.y) < SIDE_HOLE_RADIUS) {
-      return true;
+    var distance = getDistance(BOTTOM_SIDE_X, BOTTOM_SIDE_Y, ball.x, ball.y);
+    if (distance < HOLE_RANGE) {
+      return {
+        name: 'BOTTOM_SIDE',
+        distance: distance,
+        radius: SIDE_HOLE_RADIUS,
+      };
     }
-    else if (getDistance(TOP_SIDE_X, TOP_SIDE_Y, ball.x, ball.y) < SIDE_HOLE_RADIUS) { 
-      return true;
+    var distance = getDistance(TOP_SIDE_X, TOP_SIDE_Y, ball.x, ball.y);
+    if (distance < HOLE_RANGE) {
+      return {
+        name: 'TOP_SIDE',
+        distance: distance,
+        radius: SIDE_HOLE_RADIUS,
+      };
     }
+    return {}
   }
 
   function getDistance(x1, y1, x2, y2) {
@@ -272,8 +468,7 @@ lz(event.offsetX, event.offsetY)
     lineBetween.yIntercept = ball.y - lineBetween.slope * ball.x;
     var newTrajectory = {};
     newTrajectory.slopeBetweenBalls = lineBetween.slope;
-       // eq from StackOverflow: double M3 = ((2 * M1) + (M2 * pow(M1, 2)) - M2) / (2 * M1 * M2 - pow(M1, 2) + 1);
-    var newSlope = ((2 * lineBetween.slope) + (ball.slope * Math.pow(lineBetween.slope, 2)) - ball.slope) / ( 2 * lineBetween.slope * ball.slope - Math.pow(lineBetween.slope, 2) + 1);
+    var newSlope = getSlopeReflectingAcrossSlope(ball.slope, lineBetween.slope);
     newTrajectory.slope = newSlope;
     var oldSlope = ball.slope;
     var quadrant = getObjectQuadrant(ballStruck.x, ballStruck.y, ball.x, ball.y);
@@ -318,6 +513,11 @@ lz(event.offsetX, event.offsetY)
       }
     }
     return newTrajectory;
+  }
+
+  function getSlopeReflectingAcrossSlope(oldSlope, slopeBetween) {
+      // eq from StackOverflow: double M3 = ((2 * M1) + (M2 * pow(M1, 2)) - M2) / (2 * M1 * M2 - pow(M1, 2) + 1);
+    return ((2 * slopeBetween) + (oldSlope * Math.pow(slopeBetween, 2)) - oldSlope) / ( 2 * slopeBetween * oldSlope - Math.pow(slopeBetween, 2) + 1);
   }
 
   function ballReflectingAgainstTable(ball) {
