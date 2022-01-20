@@ -15,6 +15,7 @@
       <rect id="stick"/>
       <rect id="powerselectorbottom"/>
       <rect id="block"/>
+      <rect id="powerselectorcover"/>
 
       <rect class="cornerlane" id="topleftlane" transform="rotate(135)"/>
       <rect class="cornerlane" id="toprightlane" transform="rotate(45)"/>
@@ -67,7 +68,11 @@
   var gameStarted = false;
 
   var selectingPower = false;
+  var stickSet = false;
+  var ballsMoving = false;
   var mouseDownStartingY, STICK_HEIGHT_PERCENTAGE = 47, STICK_Y_PERCENTAGE = 32;
+
+  var MARGIN_TOP = 50;
 
   window.addEventListener('load', function(event) {
     setTableSizeVariables();
@@ -86,8 +91,13 @@
       if (document.getElementById('cue')) {
         var location = getElementTableLocation(event.clientX, event.clientY);
         if (cursorOnTable(location.x, location.y)) {
-          clearPreviousPredictedLocation();
-          placePredictedCueLocation(location.x, location.y);
+          if (!stickSet && !ballsMoving) {
+            clearPreviousPredictedLocation();
+            placePredictedCueLocation(location.x, location.y);
+          }
+        }
+        else {
+          stickSet = false; // unglue stick when mouse returns to table
         }
       }
     });
@@ -98,10 +108,7 @@
       var cursorLocationOnTable = getElementTableLocation(adjustedPositionX(event.clientX), adjustedPositionY(event.clientY));
       if (cursorLocationOnTable.x > TABLE_X && cursorLocationOnTable.y > TABLE_Y) {
         setInitialCueBallMovementData(cursorLocationOnTable.x, cursorLocationOnTable.y);
-        if (!gameStarted) {
-          gameStarted = true;
-          incrementLocationsOfBalls();
-        }
+        stickSet = !stickSet;
       }
     });
   }
@@ -135,10 +142,25 @@
     document.addEventListener('mouseup', function(event) {
       if (selectingPower) {
         selectingPower = false;
+        var stick = document.getElementById('stick');
+        var offsetY = stick.getBoundingClientRect().y;
+        var originalOffsetY = STICK_Y_PERCENTAGE * .01 * SCREEN_HEIGHT + MARGIN_TOP;
+        var y = offsetY - originalOffsetY;
+        var stickHeight = STICK_HEIGHT_PERCENTAGE * .01 * SCREEN_HEIGHT;
+        var powerPercentage = y / stickHeight;
+        var cueBall = document.getElementById('cue');
+        cueBall.distanceMovedPerIncrement = powerPercentage * MAX_DISTANCE_MOVED;
+        ballsMoving = true;
+        clearPreviousPredictedLocation();
+        fadeOutPowerSelector();
+        if (!gameStarted) {
+          gameStarted = true;
+          incrementLocationsOfBalls();
+        }
       }
     });
   }
-  
+
   function setInitialCueBallMovementData(cursorX, cursorY) {
     var cueBall = document.getElementById('cue');
     cueBall.x = pixelLocationToNumericalValue(cueBall.style.cx);
@@ -146,7 +168,6 @@
     cueBall.slope = (cursorY - cueBall.y) / (cursorX - cueBall.x);
     cueBall.direction = cursorX < cueBall.x ? 'left' : 'right';
     cueBall.directionUpDown = cursorY > cueBall.y ? 'top' : 'bottom';
-    cueBall.distanceMovedPerIncrement = MAX_DISTANCE_MOVED;
     cueBall.isMoving = true;
   }
 
@@ -219,11 +240,59 @@
   function ballMovementDecrease(ball, factor) {
     if (ball.distanceMovedPerIncrement) {
       ball.distanceMovedPerIncrement -= factor * ball.distanceMovedPerIncrement;
-      if (ball.distanceMovedPerIncrement <= .001) {
+      if (ball.distanceMovedPerIncrement <= .001 && ball.distanceMovedPerIncrement) {
         ball.distanceMovedPerIncrement = 0;
         ball.isMoving = false;
+        if (ballsDoneMoving()) {
+          ballsMoving = false;
+          resetPowerSelector();
+        }
       }
     }
+  }
+
+  function resetPowerSelector() {
+    fadeInPowerSelector();
+    var stick = document.getElementById('stick');
+    stick.style.y = STICK_Y_PERCENTAGE + '%';
+  }
+
+  function fadeOutPowerSelector() {
+    var powerSelectorCover = document.getElementById('powerselectorcover');
+    powerSelectorCover.style.x = '5%';
+    updateOpacityUp(0, powerSelectorCover);
+  }
+
+  function updateOpacityUp(i, cover) {
+    var percentage = i / 25;
+    cover.style.opacity = percentage * 1;
+    i++;
+    if (i <= 25) setTimeout(function() { updateOpacityUp(i, cover) }, 1);
+  }
+
+  function updateOpacityDown(i, cover, finalize) {
+    var percentage = i / 25;
+    cover.style.opacity = 1 - percentage * 1;
+    i++;
+    if (i <= 25) setTimeout(function() { updateOpacityDown(i, cover, finalize) }, 1);
+    else finalize();
+  }
+
+  function fadeInPowerSelector() {
+    var powerSelectorCover = document.getElementById('powerselectorcover');
+    updateOpacityDown(0, powerSelectorCover, function() {
+      powerSelectorCover.style.x = '0%'
+    });
+  }
+
+  function ballsDoneMoving() {
+    for (var i = 0; i < ballsOnTable.length; i++) {
+      var ball = ballsOnTable[i];
+      if (ball.isMoving) {
+        return false;
+      }
+    }
+    return true;
   }
 
   function calculateBallDataAfterLaneReflection(ball, lane, rail) {
@@ -1275,6 +1344,15 @@
     width: 5%;
     height: 50%;
     x: 5%;
+    y: 30%;
+  }
+
+  #powerselectorcover {
+    fill: black;
+    opacity: 0;
+    width: 5%;
+    height: 50%;
+    x: 0%;
     y: 30%;
   }
 
