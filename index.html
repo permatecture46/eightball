@@ -10,6 +10,12 @@
 
       <rect id="table"/>
 
+      <rect id="powerselector"/>
+      <rect id="powerdisplay"/>
+      <rect id="stick"/>
+      <rect id="powerselectorbottom"/>
+      <rect id="block"/>
+
       <rect class="cornerlane" id="topleftlane" transform="rotate(135)"/>
       <rect class="cornerlane" id="toprightlane" transform="rotate(45)"/>
       <rect class="cornerlane" id="bottomleftlane" transform="rotate(45)"/>
@@ -43,7 +49,7 @@
 
   var CORNER_MIN_X, CORNER_MAX_X, CORNER_MIN_Y, CORNER_MAX_Y;
   var SIDE_MIN, SIDE_MAX;
-  var SCREEN_X, SCREEN_Y;
+  var SCREEN_X, SCREEN_Y, SCREEN_HEIGHT;
   var CORNER_LANE_SLOPE = 1, CORNER_LANE_SLOPE_2 = -1;
   var SIDE_LANE_SLOPE = 2.145;
 
@@ -58,6 +64,10 @@
   var HOLE_RANGE = 100;
 
   var ballsOnTable = [];
+  var gameStarted = false;
+
+  var selectingPower = false;
+  var mouseDownStartingY, STICK_HEIGHT_PERCENTAGE = 47, STICK_Y_PERCENTAGE = 32;
 
   window.addEventListener('load', function(event) {
     setTableSizeVariables();
@@ -66,6 +76,9 @@
     //ballsOnTable = placeNonrandomBalls();
     setPredictedCueLocationListener();
     setClickListener();
+    setMouseDownListener();
+    setMouseMoveListener();
+    setMouseUpListener();
   });
 
   function setPredictedCueLocationListener() {
@@ -82,10 +95,47 @@
 
   function setClickListener() {
     document.addEventListener('click', function(event) {
-lz(event.offsetX, event.offsetY)
       var cursorLocationOnTable = getElementTableLocation(adjustedPositionX(event.clientX), adjustedPositionY(event.clientY));
-      setInitialCueBallMovementData(cursorLocationOnTable.x, cursorLocationOnTable.y);
-      incrementLocationsOfBalls();
+      if (cursorLocationOnTable.x > TABLE_X && cursorLocationOnTable.y > TABLE_Y) {
+        setInitialCueBallMovementData(cursorLocationOnTable.x, cursorLocationOnTable.y);
+        if (!gameStarted) {
+          gameStarted = true;
+          incrementLocationsOfBalls();
+        }
+      }
+    });
+  }
+
+  function setMouseDownListener() {
+    document.addEventListener('mousedown', function(event) {
+      if (event.target.id == 'stick') {
+        selectingPower = true;
+        mouseDownStartingY = event.offsetY;
+      }
+    });
+  }
+
+  function setMouseMoveListener() {
+    document.addEventListener('mousemove', function(event) {
+      if (selectingPower) {
+        var stickOffsetY = event.offsetY - mouseDownStartingY;
+        if (stickOffsetY > 0) {
+          var stickHeightNum = STICK_HEIGHT_PERCENTAGE * SCREEN_HEIGHT * .01;
+          if (stickOffsetY > stickHeightNum) {
+            stickOffsetY = stickHeightNum;
+          }
+          var stick = document.getElementById('stick');
+          stick.style.y = STICK_Y_PERCENTAGE + stickOffsetY / stickHeightNum * STICK_HEIGHT_PERCENTAGE + '%';
+        }
+      }
+    });
+  }
+
+  function setMouseUpListener() {
+    document.addEventListener('mouseup', function(event) {
+      if (selectingPower) {
+        selectingPower = false;
+      }
     });
   }
   
@@ -670,6 +720,7 @@ lz(event.offsetX, event.offsetY)
       var screenInfo = screen.getBoundingClientRect();
       TABLE_WIDTH = tableInfo.width;
       TABLE_HEIGHT = tableInfo.height;
+      SCREEN_HEIGHT = screenInfo.height;
       SCREEN_X = screenInfo.x;
       SCREEN_Y = screenInfo.y;
       TABLE_X = tableInfo.x - SCREEN_X;
@@ -1219,6 +1270,45 @@ lz(event.offsetX, event.offsetY)
     height: 5%;
   }
 
+  #powerselector {
+    fill: grey;
+    width: 5%;
+    height: 50%;
+    x: 5%;
+    y: 30%;
+  }
+
+  #powerdisplay {
+    fill: black;
+    width: 3%;
+    height: 48%;
+    x: 6%;
+    y: 31%;
+  }
+
+  #stick {
+    fill: yellow;
+    width: 1%;
+    height: 47%;
+    x: 7%;
+    y: 32%;
+  }
+
+  #block {
+    fill: black;
+    width: 5%;
+    height: 20%;
+    x: 5%;
+    y: 80%;
+  }
+
+  #powerselectorbottom {
+    fill: grey;
+    width: 5%;
+    height: 2%;
+    x: 5%;
+    y: 79%;
+  }
 
 </style>
 </html>
