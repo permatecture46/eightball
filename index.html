@@ -74,10 +74,12 @@
 
   var MARGIN_TOP = 50;
 
+  var STICK_TO_CUE_DISTANCE = 15, STICK_END_TO_CUE_DISTANCE = 160;
+
   window.addEventListener('load', function(event) {
     setTableSizeVariables();
     ballsOnTable = placeRandomBalls();
-    ballsOnTable.push(placeRandomBall());
+    ballsOnTable.push(placeRandomBall('white'));
     //ballsOnTable = placeNonrandomBalls();
     setPredictedCueLocationListener();
     setClickListener();
@@ -88,12 +90,15 @@
 
   function setPredictedCueLocationListener() {
     document.addEventListener('mousemove', function(event) {
-      if (document.getElementById('cue')) {
+      var cue = document.getElementById('cue');
+      if (cue) {
         var location = getElementTableLocation(event.clientX, event.clientY);
         if (cursorOnTable(location.x, location.y)) {
           if (!stickSet && !ballsMoving) {
-            clearPreviousPredictedLocation();
-            placePredictedCueLocation(location.x, location.y);
+            var predictedLocation = getPredictedCueLocation(location.x, location.y, cue.x, cue.y);
+            placePredictorBall(predictedLocation.x + 'px', predictedLocation.y + 'px');
+            placePredictedPath(predictedLocation.x, predictedLocation.y, cue.x, cue.y);
+            placeCueStick(predictedLocation.x, predictedLocation.y, cue.x, cue.y);
           }
         }
         else {
@@ -101,6 +106,30 @@
         }
       }
     });
+  }
+
+  function placeCueStick(x1, y1, x2, y2){
+    var direction = x1 - x2 > 0 ? 'right' : 'left';
+    var slope = (y2 - y1) / (x1 - x2) * -1;
+    var X1change = (STICK_TO_CUE_DISTANCE / Math.sqrt(1 + Math.pow(slope, 2))) * (x1 - x2 > 0 ? -1 : 1);
+    var X1 = x2 + X1change;
+    var Y1 = y2 + slope * X1change;
+    var X2change = STICK_END_TO_CUE_DISTANCE / Math.sqrt(1 + Math.pow(slope, 2)) * (x1 - x2 > 0 ? -1 : 1);
+    var X2 = x2 + X2change;
+    var Y2 = y2 + slope * X2change;
+    var stick = document.getElementById('stick2');
+    if (!stick) {
+      appendSVG('line', function(element) {
+        stick = element;
+        element.id = 'stick2';
+        element.style.stroke = 'yellow';
+        element.style.strokeWidth = '4px';
+      });
+    }
+    stick.setAttribute('x1', X1);
+    stick.setAttribute('y1', Y1);
+    stick.setAttribute('x2', X2);
+    stick.setAttribute('y2', Y2);
   }
 
   function setClickListener() {
@@ -151,7 +180,7 @@
         var cueBall = document.getElementById('cue');
         cueBall.distanceMovedPerIncrement = powerPercentage * MAX_DISTANCE_MOVED;
         ballsMoving = true;
-        clearPreviousPredictedLocation();
+        clearPredictorGraphics();
         fadeOutPowerSelector();
         if (!gameStarted) {
           gameStarted = true;
@@ -159,6 +188,10 @@
         }
       }
     });
+  }
+
+  function clearPredictorGraphics() {
+
   }
 
   function setInitialCueBallMovementData(cursorX, cursorY) {
@@ -169,6 +202,22 @@
     cueBall.direction = cursorX < cueBall.x ? 'left' : 'right';
     cueBall.directionUpDown = cursorY > cueBall.y ? 'top' : 'bottom';
     cueBall.isMoving = true;
+  }
+
+  function placePredictedPath(x1, y1, x2, y2) {
+    var cuePath = document.getElementById('cuepath');
+    if (!cuePath) {
+      appendSVG('line', function(element) {
+        cuePath = element;
+        element.id = 'cuepath';
+        element.style.stroke = 'white';
+        element.style.strokeWidth = '2px';
+      });
+    }
+    cuePath.setAttribute('x1', x1);
+    cuePath.setAttribute('y1', y1);
+    cuePath.setAttribute('x2', x2);
+    cuePath.setAttribute('y2', y2);
   }
 
   function incrementLocationsOfBalls() {
@@ -774,13 +823,6 @@
     console.log(print, print2, print3, print4, print5, print6);
   }
 
-  function clearPreviousPredictedLocation() {
-    var predictedBall = document.getElementById('predicted');
-    if (predictedBall) {
-      predictedBall.parentNode.removeChild(predictedBall);
-    }
-  }
-
   function setTableSizeVariables() {
     var table = document.getElementById('table');
     var screen = document.getElementById('screen');
@@ -840,10 +882,9 @@
     }
   }
 
-  function placePredictedCueLocation(cursorX, cursorY) {
-    var currentLocation = getElementTableLocationByID('cue');
-    var predictedLocation = getPredictedLocation(currentLocation.x, currentLocation.y, adjustedPositionX(cursorX), adjustedPositionY(cursorY));
-    placeBall('white', predictedLocation.x + 'px', predictedLocation.y + 'px', 'predicted');
+  function getPredictedCueLocation(cursorX, cursorY, cueX, cueY) {
+    var predictedLocation = getPredictedLocation(cueX, cueY, adjustedPositionX(cursorX), adjustedPositionY(cursorY));
+    return predictedLocation;
   }
 
   function getElementTableLocationByID(id) {
@@ -1153,7 +1194,7 @@
 
   function placeNonrandomBalls() {
     var result = [];
-    result.push(placeBall('red', 82 + 'px', 49 + 'px', 'cue'));
+    result.push(placeBall('grey', 82 + 'px', 49 + 'px', 'cue'));
     result.push(placeBall('green', 167 + 'px', 43 + 'px'));
     result.push(placeBall('green', 354 + 'px', 78 + 'px'));
     return result;
@@ -1180,6 +1221,25 @@
       element.y = pixelLocationToNumericalValue(cy);
       if (id) element.id = id;
     });
+    return ball;
+  }
+
+  function placePredictorBall(cx, cy) {
+    var ball = document.getElementById('predicted');
+    if (!ball) {
+      appendSVG('circle', function(element) {
+        ball = element;
+        element.id = 'predicted';
+        element.style.fill = 'transparent';
+        element.style.stroke = 'white'
+        element.style.strokeWidth = '2px'
+        element.style.r = BALL_RADIUS;
+      });
+    }
+    ball.style.cx = cx;
+    ball.style.cy = cy;
+    ball.x = pixelLocationToNumericalValue(cx);
+    ball.y = pixelLocationToNumericalValue(cy);
     return ball;
   }
 
