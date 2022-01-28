@@ -87,29 +87,33 @@
     setMouseDownListener();
     setMouseMoveListener();
     setMouseUpListener();
+    setDefaultStick();
   });
+
+  function setDefaultStick() {
+    var cueBall = document.getElementById('cueball');
+    if (cueBall) { 
+      var cursorLocation = {};
+      if (cueBall.x < TABLE_X + TABLE_WIDTH / 2) {
+        cursorLocation.x = TABLE_X + TABLE_WIDTH * .75;
+        cursorLocation.y = cueBall.y - TABLE_Y;
+      }
+      else {
+        cursorLocation.x = TABLE_X + TABLE_WIDTH * .25;
+        cursorLocation.y = cueBall.y - TABLE_Y;
+      }
+      placePredictorGraphics(cueBall, cursorLocation.x, cursorLocation.y, cueBall.x, cueBall.y);
+    }
+  }
 
   function setPredictedCueLocationListener() {
     document.addEventListener('mousemove', function(event) {
-      var cueBall = document.getElementById('cue');
+      var cueBall = document.getElementById('cueball');
       if (cueBall) {
         var cursorLocation = getElementTableLocation(event.clientX, event.clientY);
         if (cursorOnTable(cursorLocation.x, cursorLocation.y)) {
           if (!stickSet && !ballsMoving) {
-            predictedLocationData = getPredictedCueLocationData(cursorLocation.x, cursorLocation.y, cueBall.x, cueBall.y);
-            placePredictorBall(predictedLocationData.x + 'px', predictedLocationData.y + 'px');
-            placePredictedPath(predictedLocationData.x, predictedLocationData.y, cueBall.x, cueBall.y);
-            placeCueStick(predictedLocationData.x, predictedLocationData.y, cueBall.x, cueBall.y);
-            if (predictedLocationData.ball) {
-              setMovementData(cueBall.x, cueBall.y, event.offsetX, event.offsetY, cueBall);
-              var predictorBall = document.getElementById('predictorball');
-              setMovementData(cueBall.x, cueBall.y, event.offsetX, event.offsetY, predictorBall);
-              placeReflectedPath(predictorBall, predictedLocationData.ball, predictedLocationData.x, predictedLocationData.y);
-            }
-            else {
-              clearReflectedPath();
-              setMovementData(cueBall.x, cueBall.y, event.offsetX, event.offsetY, cueBall);
-            }
+            placePredictorGraphics(cueBall, cursorLocation.x, cursorLocation.y, cueBall.x, cueBall.y);
           }
         }
         else {
@@ -119,15 +123,55 @@
     });
   }
 
-  function clearReflectedPath() {
-    var rpath = document.getElementById('reflectionpath');
-    if (rpath) {
-      rpath.parentNode.removeChild(rpath);
+  function placePredictorGraphics(cueBall, cursorX, cursorY, cueBallX, cueBallY) {
+    predictedLocationData = getPredictedCueLocationData(cursorX, cursorY, cueBallX, cueBallY);
+    placePredictorBall(predictedLocationData.x + 'px', predictedLocationData.y + 'px');
+    placePredictedPath(predictedLocationData.x, predictedLocationData.y, cueBallX, cueBallY);
+    placeCueStick(predictedLocationData.x, predictedLocationData.y, cueBallX, cueBallY);
+    if (predictedLocationData.ball) {
+      setMovementData(cueBallX, cueBallY, cursorX + TABLE_X, cursorY + TABLE_Y, cueBall);
+      var predictorBall = document.getElementById('predictorball');
+      setMovementData(cueBallX, cueBallY, cursorX + TABLE_X, cursorY + TABLE_Y, predictorBall);
+      placeReflectedPath(predictorBall, predictedLocationData.ball);
+      placeBallStruckPath(predictorBall, predictedLocationData.ball);
+    }
+    else {
+      clearPaths();
+      setMovementData(cueBallX, cueBallY, cursorX + TABLE_X, cursorY + TABLE_Y, cueBall);
     }
   }
 
-  function placeReflectedPath(cueBall, ballIntersecting, X1, Y1) {
+  function placeBallStruckPath(cueBall, ballStruck) {
+    ballStruck.slope = (ballStruck.y - cueBall.y) / (ballStruck.x - cueBall.x);
+    var newBallStruckData = calculateBallDataAfterBeingStruck(cueBall, ballStruck);
+    var X1 = ballStruck.x;
+    var Y1 = ballStruck.y;
+    var X2change = (50 / Math.sqrt(1 + Math.pow(ballStruck.slope, 2))) * (newBallStruckData.direction == 'left' ? -1 : 1);
+    var X2 = X1 + X2change;
+    var Y2 = Y1 + ballStruck.slope * X2change;
+    var bspath = document.getElementById('ballstruckpath');
+    if (!bspath) {
+      appendSVG('line', function(element){
+        bspath = element;
+        element.id = 'ballstruckpath';
+        element.style.stroke = 'white';
+        element.style.strokeWidth = '2px';
+      });
+    }
+    bspath.setAttribute('x1', X1);
+    bspath.setAttribute('y1', Y1);
+    bspath.setAttribute('x2', X2);
+    bspath.setAttribute('y2', Y2);
+  }
+
+  function clearPaths() {
+    clearElements('reflectionpath', 'ballstruckpath');
+  }
+
+  function placeReflectedPath(cueBall, ballIntersecting) {
     var newBallData = calculateBallDataAfterStriking(cueBall, ballIntersecting);
+    var X1 = cueBall.x;
+    var Y1 = cueBall.y;
     var X2change = (50 / Math.sqrt(1 + Math.pow(newBallData.slope, 2))) * (newBallData.direction == 'left' ? -1 : 1);
     var X2 = X1 + X2change;
     var Y2 = Y1 + newBallData.slope * X2change;
@@ -213,7 +257,7 @@
         var y = offsetY - originalOffsetY;
         var stickHeight = STICK_HEIGHT_PERCENTAGE * .01 * SCREEN_HEIGHT;
         var powerPercentage = y / stickHeight;
-        var cueBall = document.getElementById('cue');
+        var cueBall = document.getElementById('cueball');
         cueBall.distanceMovedPerIncrement = powerPercentage * MAX_DISTANCE_MOVED;
         cueBall.isMoving = true;
         ballsMoving = true;
@@ -228,6 +272,17 @@
   }
   
   function clearPredictorGraphics() {
+    clearElements('stick2', 'reflectionpath', 'ballstruckpath', 'cuepath', 'predictorball');
+  }
+
+  function clearElements(){
+    for (var i = 0; i < arguments.length; i++) {
+      var id = arguments[i];
+      var element = document.getElementById(id);
+      if (element) {
+        element.parentNode.removeChild(element);
+      }
+    }
   }
 
   function setMovementData(X1, Y1, X2, Y2, ball) {
@@ -337,6 +392,7 @@
         if (ballsDoneMoving()) {
           ballsMoving = false;
           resetPowerSelector();
+          setDefaultStick();
         }
       }
     }
@@ -713,7 +769,9 @@
 
   function calculateBallDataAfterBeingStruck(ball, ballStruck) {
     var newTrajectory = {};
-    newTrajectory.distanceMovedPerIncrement = ball.distanceMovedPerIncrement * DECREASE_UPON_REFLECTION_FACTOR;
+    if (ball.distanceMovedPerIncrement) {
+      newTrajectory.distanceMovedPerIncrement = ball.distanceMovedPerIncrement * DECREASE_UPON_REFLECTION_FACTOR;
+    }
     if (ball.x > ballStruck.x) { 
       newTrajectory.direction = 'left';
     }
@@ -742,7 +800,6 @@
       if (ball != ballToCheck) {
         var distanceBetweenBalls = getHypotenuseFromDifferences(ball.x - ballToCheck.x, ball.y - ballToCheck.y);
         if (distanceBetweenBalls < 2 * BALL_RADIUS_VALUE) {
-lz(distanceBetweenBalls)
           return ballToCheck;
         }
       }
@@ -1032,7 +1089,7 @@ lz(distanceBetweenBalls)
     var balls = [];
     for (var i = 0; i < ballsOnTable.length; i++) {
       var ball = ballsOnTable[i];
-      if (ball.id != "cue" && ballInCorrectQuadrant(ball, quadrant, currentX, currentY)) {
+      if (ball.id != 'cueball' && ballInCorrectQuadrant(ball, quadrant, currentX, currentY)) {
         balls.push(ball);
       }
     }
@@ -1229,7 +1286,7 @@ lz(distanceBetweenBalls)
     var randomX = adjustedPositionX(Math.random() * (TABLE_WIDTH - BALL_RADIUS_VALUE * 2) + BALL_RADIUS_VALUE) + 'px';
     var randomY = adjustedPositionY(Math.random() * (TABLE_HEIGHT - BALL_RADIUS_VALUE * 2) + BALL_RADIUS_VALUE) + 'px';
     if (!multiple) {
-      return placeBall(color || 'red', randomX, randomY, 'cue');
+      return placeBall(color || 'red', randomX, randomY, 'cueball');
     }
     else {
       return placeBall(color || 'red', randomX, randomY);
@@ -1238,7 +1295,7 @@ lz(distanceBetweenBalls)
 
   function placeNonrandomBalls() {
     var result = [];
-    result.push(placeBall('grey', 82 + 'px', 49 + 'px', 'cue'));
+    result.push(placeBall('grey', 82 + 'px', 49 + 'px', 'cueball'));
     result.push(placeBall('green', 167 + 'px', 43 + 'px'));
     result.push(placeBall('green', 354 + 'px', 78 + 'px'));
     return result;
