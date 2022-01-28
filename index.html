@@ -71,6 +71,7 @@
   var stickSet = false;
   var ballsMoving = false;
   var mouseDownStartingY, STICK_HEIGHT_PERCENTAGE = 47, STICK_Y_PERCENTAGE = 32;
+  var predictedLocationData;
 
   var MARGIN_TOP = 50;
 
@@ -95,7 +96,7 @@
         var cursorLocation = getElementTableLocation(event.clientX, event.clientY);
         if (cursorOnTable(cursorLocation.x, cursorLocation.y)) {
           if (!stickSet && !ballsMoving) {
-            var predictedLocationData = getPredictedCueLocationData(cursorLocation.x, cursorLocation.y, cueBall.x, cueBall.y);
+            predictedLocationData = getPredictedCueLocationData(cursorLocation.x, cursorLocation.y, cueBall.x, cueBall.y);
             placePredictorBall(predictedLocationData.x + 'px', predictedLocationData.y + 'px');
             placePredictedPath(predictedLocationData.x, predictedLocationData.y, cueBall.x, cueBall.y);
             placeCueStick(predictedLocationData.x, predictedLocationData.y, cueBall.x, cueBall.y);
@@ -107,6 +108,7 @@
             }
             else {
               clearReflectedPath();
+              setMovementData(cueBall.x, cueBall.y, event.offsetX, event.offsetY, cueBall);
             }
           }
         }
@@ -259,6 +261,7 @@
         setNewLocation(ball, newLocation);
         ballStruck = ballStrikingOtherBall(ball);
         if (!!ballStruck && !ball.ballJustStruck) {
+          adjustBallPosition(ball);
           var newBallData = calculateBallDataAfterStriking(ball, ballStruck);
           setNewBallData(ball, newBallData);
           ball.ballJustStruck = true;
@@ -277,6 +280,7 @@
           ballMovementDecrease(ball, DECREASE_UPON_REFLECTION_FACTOR);
         }
         else {
+          predictedLocationData = null;
           ball.ballJustStruck = false;
           if (ballStruck) ballStruck.ballJustStruck = false;
           var ballReflecting = ballReflectingAgainstTable(ball);
@@ -314,6 +318,14 @@
     setTimeout(function() {
       incrementLocationsOfBalls();
     }, TIME_BETWEEN_INCREMENTS);
+  }
+
+  function adjustBallPosition(ball) {
+    if (predictedLocationData) {
+      ball.x = predictedLocationData.x;
+      ball.y = predictedLocationData.y;
+      predictedLocationData = null;
+    }
   }
   
   function ballMovementDecrease(ball, factor) {
@@ -730,6 +742,7 @@
       if (ball != ballToCheck) {
         var distanceBetweenBalls = getHypotenuseFromDifferences(ball.x - ballToCheck.x, ball.y - ballToCheck.y);
         if (distanceBetweenBalls < 2 * BALL_RADIUS_VALUE) {
+lz(distanceBetweenBalls)
           return ballToCheck;
         }
       }
