@@ -77,6 +77,8 @@
 
   var STICK_TO_CUE_DISTANCE = 15, STICK_END_TO_CUE_DISTANCE = 160;
 
+  var MAX_PREDICTOR_PATH_LENGTH = 50;
+
   window.addEventListener('load', function(event) {
     setTableSizeVariables();
     ballsOnTable = placeRandomBalls();
@@ -132,8 +134,8 @@
       setMovementData(cueBallX, cueBallY, cursorX + TABLE_X, cursorY + TABLE_Y, cueBall);
       var predictorBall = document.getElementById('predictorball');
       setMovementData(cueBallX, cueBallY, cursorX + TABLE_X, cursorY + TABLE_Y, predictorBall);
-      placeReflectedPath(predictorBall, predictedLocationData.ball);
-      placeBallStruckPath(predictorBall, predictedLocationData.ball);
+      var powerKeptByCue = placeReflectedPath(predictorBall, predictedLocationData.ball);
+      placeBallStruckPath(predictorBall, predictedLocationData.ball, powerKeptByCue);
     }
     else {
       clearPaths();
@@ -141,12 +143,12 @@
     }
   }
 
-  function placeBallStruckPath(cueBall, ballStruck) {
+  function placeBallStruckPath(cueBall, ballStruck, powerKeptByCue) {
     ballStruck.slope = (ballStruck.y - cueBall.y) / (ballStruck.x - cueBall.x);
     var newBallStruckData = calculateBallDataAfterBeingStruck(cueBall, ballStruck);
     var X1 = ballStruck.x;
     var Y1 = ballStruck.y;
-    var X2change = (50 / Math.sqrt(1 + Math.pow(ballStruck.slope, 2))) * (newBallStruckData.direction == 'left' ? -1 : 1);
+    var X2change = ((MAX_PREDICTOR_PATH_LENGTH * (1 - powerKeptByCue))/ Math.sqrt(1 + Math.pow(ballStruck.slope, 2))) * (newBallStruckData.direction == 'left' ? -1 : 1);
     var X2 = X1 + X2change;
     var Y2 = Y1 + ballStruck.slope * X2change;
     var bspath = document.getElementById('ballstruckpath');
@@ -172,7 +174,9 @@
     var newBallData = calculateBallDataAfterStriking(cueBall, ballIntersecting);
     var X1 = cueBall.x;
     var Y1 = cueBall.y;
-    var X2change = (50 / Math.sqrt(1 + Math.pow(newBallData.slope, 2))) * (newBallData.direction == 'left' ? -1 : 1);
+lz(newBallData);
+    var powerKeptByCue = getPowerKeptByCue(cueBall, newBallData);
+    var X2change = ((MAX_PREDICTOR_PATH_LENGTH * powerKeptByCue) / Math.sqrt(1 + Math.pow(newBallData.slope, 2))) * (newBallData.direction == 'left' ? -1 : 1);
     var X2 = X1 + X2change;
     var Y2 = Y1 + newBallData.slope * X2change;
     var rpath = document.getElementById('reflectionpath');
@@ -188,6 +192,7 @@
     rpath.setAttribute('y1', Y1);
     rpath.setAttribute('x2', X2);
     rpath.setAttribute('y2', Y2);
+    return powerKeptByCue;
   }
 
   function placeCueStick(x1, y1, x2, y2){
@@ -318,13 +323,16 @@
         if (!!ballStruck && !ball.ballJustStruck) {
           adjustBallPosition(ball);
           var newBallData = calculateBallDataAfterStriking(ball, ballStruck);
+          var savedPreviousData = {
+            slope: ball.slope, direction: ball.direction, directionUpDown: ball.directionUpDown
+          };
           setNewBallData(ball, newBallData);
           ball.ballJustStruck = true;
           ballStruck.ballJustStruck = true;
           if (!ballStruck.isMoving) { // redo slopes
             ballStruck.isMoving = true;
             ballStruck.slope = newBallData.slopeBetweenBalls;
-            var powerKeptByCue = getPowerKeptByCue(ball.slope, ballStruck.slope);
+            var powerKeptByCue = getPowerKeptByCue(savedPreviousData, ball);
 	    var newBallStruckData = calculateBallDataAfterBeingStruck(ball, ballStruck, powerKeptByCue);
             setNewBallStruckData(ballStruck, newBallStruckData);
             ballMovementDecrease(ball, 1 - powerKeptByCue);
@@ -378,9 +386,32 @@
     }, TIME_BETWEEN_INCREMENTS);
   }
 
-  function getPowerKeptByCue(slope1, slope2) {
-    var angle = Math.atan((slope1 - slope2) / (1 + slope1 * slope2));
-    var percentage = Math.abs(angle / (Math.PI / 2));
+  function getPowerKeptByCue(ball1, ball2) {
+    var angle = Math.atan((ball1.slope - ball2.slope) / (1 + ball1.slope * ball2.slope));
+    if (angle > 0) {
+      if ((ball1.direction == ball2.direction && ball1.directionUpDown == ball2.directionUpDown) ||
+      (angle > 0 && !(ball1.direction != ball2.direction && ball1.directionUpDown != ball2.directionUpDown) && (
+        (ball1.direction == 'left' && ball2.direction == 'left' && ball2.directionUpDown == 'top') ||
+        (ball1.direction == 'right' && ball2.direction == 'right' && ball2.directionUpDown == 'bottom') ||
+        (ball1.directionUpDown == 'top' && ball2.directionUpDown == 'top' && ball2.direction == 'right') ||
+        (ball1.directionUpDown == 'bottom' && ball2.directionUpDown == 'bottom' && ball2.direction == 'left')
+      ))) {
+        angle = Math.PI - angle;
+      }
+    }
+    else {
+      angle = -1 * angle;
+      if ((ball1.direction == ball2.direction && ball1.directionUpDown == ball2.directionUpDown) || (
+        !(ball1.direction != ball2.direction && ball1.directionUpDown != ball2.directionUpDown) && (
+        (ball1.direction == 'left' && ball2.direction == 'left' && ball2.directionUpDown == 'bottom') ||
+        (ball1.direction == 'right' && ball2.direction == 'right' && ball2.directionUpDown == 'top') ||
+        (ball1.directionUpDown == 'top' && ball2.directionUpDown == 'top' && ball2.direction == 'left') ||
+        (ball1.directionUpDown == 'bottom' && ball2.directionUpDown == 'bottom' && ball2.direction == 'right')
+      ))) {
+        angle = Math.PI - angle;
+      }
+    }
+    var percentage = angle / Math.PI;
     return percentage;
   }
 
