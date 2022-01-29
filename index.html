@@ -45,7 +45,7 @@
   var BALL_RADIUS = BALL_RADIUS_PERCENTAGE * 100 + "%";
   var TABLE_WIDTH, TABLE_HEIGHT, TABLE_X, TABLE_Y, BALL_RADIUS_VALUE;
   var TIME_BETWEEN_INCREMENTS = 1;
-  var MAX_DISTANCE_MOVED = 10;
+  var MAX_DISTANCE_MOVED = 50;
   var TEST_BALL_NUM = 8;
 
   var CORNER_MIN_X, CORNER_MAX_X, CORNER_MIN_Y, CORNER_MAX_Y;
@@ -324,15 +324,18 @@
           if (!ballStruck.isMoving) { // redo slopes
             ballStruck.isMoving = true;
             ballStruck.slope = newBallData.slopeBetweenBalls;
-	    var newBallStruckData = calculateBallDataAfterBeingStruck(ball, ballStruck);
+            var powerKeptByCue = getPowerKeptByCue(ball.slope, ballStruck.slope);
+	    var newBallStruckData = calculateBallDataAfterBeingStruck(ball, ballStruck, powerKeptByCue);
             setNewBallStruckData(ballStruck, newBallStruckData);
+            ballMovementDecrease(ball, 1 - powerKeptByCue);
           }
           else {
             var newBallData = calculateBallDataAfterStriking(ballStruck, ball);
             setNewBallData(ballStruck, newBallData);
+            ballMovementDecrease(ballStruck, DECREASE_UPON_REFLECTION_FACTOR);
+            ballMovementDecrease(ball, DECREASE_UPON_REFLECTION_FACTOR);
           }
           ballStruck.hasBeenIncremented = true;
-          ballMovementDecrease(ball, DECREASE_UPON_REFLECTION_FACTOR);
         }
         else {
           predictedLocationData = null;
@@ -373,6 +376,12 @@
     setTimeout(function() {
       incrementLocationsOfBalls();
     }, TIME_BETWEEN_INCREMENTS);
+  }
+
+  function getPowerKeptByCue(slope1, slope2) {
+    var angle = Math.atan((slope1 - slope2) / (1 + slope1 * slope2));
+    var percentage = Math.abs(angle / (Math.PI / 2));
+    return percentage;
   }
 
   function adjustBallPosition(ball) {
@@ -767,10 +776,10 @@
     ballStruck.distanceMovedPerIncrement = newBallStruckData.distanceMovedPerIncrement;
   }
 
-  function calculateBallDataAfterBeingStruck(ball, ballStruck) {
+  function calculateBallDataAfterBeingStruck(ball, ballStruck, powerKeptByCue) {
     var newTrajectory = {};
-    if (ball.distanceMovedPerIncrement) {
-      newTrajectory.distanceMovedPerIncrement = ball.distanceMovedPerIncrement * DECREASE_UPON_REFLECTION_FACTOR;
+    if (ball.distanceMovedPerIncrement && powerKeptByCue) {
+      newTrajectory.distanceMovedPerIncrement = ball.distanceMovedPerIncrement * (1 - powerKeptByCue);
     }
     if (ball.x > ballStruck.x) { 
       newTrajectory.direction = 'left';
@@ -1061,12 +1070,22 @@
   function getBallDataInRelationToCue(ball, slope, yIntercept, currentX, currentY) {
     var ballX = ball.x;
     var ballY = ball.y;
-    var perpendicularSlope = (1 / slope) * -1;
-    var yInterceptOfPerpendicularLine = ballY - (perpendicularSlope * ballX);
-    var intersectionX = (yIntercept - yInterceptOfPerpendicularLine) / (perpendicularSlope - slope);
-    var intersectionY = intersectionX * slope + yIntercept;
-    var distanceFromCueTrajectory = getHypotenuseFromDifferences(ballX - intersectionX, ballY - intersectionY);
     var distanceBetweenCueAndBall = getHypotenuseFromDifferences(ballX - currentX, ballY - currentY);
+    if (slope == Infinity) {
+      var intersectionX = currentX;
+      var intersectionY = ballY;
+    }
+    else if (slope == 0) {
+      var intersectionX = ballX;
+      var intersectionY = currentY;
+    }
+    else { //if, as usually the case, not a right-angle slope
+      var perpendicularSlope = (1 / slope) * -1;
+      var yInterceptOfPerpendicularLine = ballY - (perpendicularSlope * ballX);
+      var intersectionX = (yIntercept - yInterceptOfPerpendicularLine) / (perpendicularSlope - slope);
+      var intersectionY = intersectionX * slope + yIntercept;
+    }
+    var distanceFromCueTrajectory = getHypotenuseFromDifferences(ballX - intersectionX, ballY - intersectionY);
     return {
       distanceFromCueTrajectory: distanceFromCueTrajectory,
       perpendicularPointX: intersectionX, 
