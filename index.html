@@ -81,9 +81,9 @@
 
   window.addEventListener('load', function(event) {
     setTableSizeVariables();
-    //ballsOnTable = placeRandomBalls();
-    //ballsOnTable.push(placeRandomBall('white'));
-    ballsOnTable = placeNonrandomBalls();
+    ballsOnTable = placeRandomBalls();
+    ballsOnTable.push(placeRandomBall('white'));
+    //ballsOnTable = placeNonrandomBalls();
     setPredictedCueLocationListener();
     setClickListener();
     setMouseDownListener();
@@ -321,36 +321,52 @@
       if (ball.isMoving && !ball.hasBeenIncremented) {
         var newLocation = calculateNewLocation(ball);
         setNewLocation(ball, newLocation);
-        ballStruck = ballStrikingOtherBall(ball);
-        if (!!ballStruck && !ball.ballJustStruck) {
+        ballsStruck = ballStrikingOtherBall(ball);
+        if (!!ballsStruck && !ball.ballJustStruck) {
           adjustBallPosition(ball);
-          var newBallData = calculateBallDataAfterStriking(ball, ballStruck);
+          var ball1 = ballsStruck.ball1;
+          var ball2 = ballsStruck.ball2;
+          var newBallData = !ball2 ? calculateBallDataAfterStriking(ball, ball1) : calculateBallDataAfterStriking(ball, createGhostBallBetweenTwo(ball, ball1));
           var savedPreviousData = {
-            slope: ball.slope, direction: ball.direction, directionUpDown: ball.directionUpDown
+            slope: ball.slope, direction: ball.direction, directionUpDown: ball.directionUpDown, x: ball.x, y: ball.y,
           };
           setNewBallData(ball, newBallData);
           ball.ballJustStruck = true;
-          ballStruck.ballJustStruck = true;
-          if (!ballStruck.isMoving) { // redo slopes
-            ballStruck.isMoving = true;
-            ballStruck.slope = newBallData.slopeBetweenBalls;
+          ball1.ballJustStruck = true;
+          if (ball2) ball2.ballJustStruck = true;
+          if (!ball1.isMoving) { // redo slopes
+            ball1.isMoving = true;
+            if (ball2) ball2.isMoving = true;
+            ball1.slope = newBallData.slopeBetweenBalls;
+            if (ball2) {
+              ball1.slope = getSlopeBetween(savedPreviousData, ball1);
+              ball2.slope = getSlopeBetween(savedPreviousData, ball2);
+            }
             var powerKeptByCue = getPowerKeptByCue(savedPreviousData, ball);
-	    var newBallStruckData = calculateBallDataAfterBeingStruck(ball, ballStruck, powerKeptByCue);
-            setNewBallStruckData(ballStruck, newBallStruckData);
+	    var newBallStruckData = calculateBallDataAfterBeingStruck(ball, ball1, powerKeptByCue);
+            setNewBallStruckData(ball1, newBallStruckData);
+            if (ball2) {
+	      var newBallStruckData2 = calculateBallDataAfterBeingStruck(ball, ball2, powerKeptByCue);
+              setNewBallStruckData(ball2, newBallStruckData2);
+            }
             ballMovementDecrease(ball, 1 - powerKeptByCue);
           }
           else {
-            var newBallData = calculateBallDataAfterStriking(ballStruck, ball);
-            setNewBallData(ballStruck, newBallData);
-            ballMovementDecrease(ballStruck, DECREASE_UPON_REFLECTION_FACTOR);
+            var newBallData = calculateBallDataAfterStriking(ball1, ball);
+            setNewBallData(ball1, newBallData);
+            ballMovementDecrease(ball1, DECREASE_UPON_REFLECTION_FACTOR);
             ballMovementDecrease(ball, DECREASE_UPON_REFLECTION_FACTOR);
           }
-          ballStruck.hasBeenIncremented = true;
+          ball1.hasBeenIncremented = true;
+          if (ball2) ball2.hasBeenIncremented = true;
         }
         else {
           predictedLocationData = null;
           ball.ballJustStruck = false;
-          if (ballStruck) ballStruck.ballJustStruck = false;
+          if (ballsStruck) {
+            ballsStruck.ball1.ballJustStruck = false;
+            if (ballsStruck.ball2) ballsStruck.ball2.ballJustStruck = false;
+          }
           var ballReflecting = ballReflectingAgainstTable(ball);
           if (!!ballReflecting) { // implicit else if
             var newBallData = calculateBallDataAfterReflection(ballReflecting, ball.slope, ball.direction, ball.directionUpDown);
@@ -386,6 +402,25 @@
     setTimeout(function() {
       incrementLocationsOfBalls();
     }, TIME_BETWEEN_INCREMENTS);
+  }
+
+  function getSlopeBetween(ball1, ball2) {
+    return (ball2.y - ball1.y) / (ball2.x - ball1.x);
+  }
+
+  function createGhostBallBetweenTwo(ball, ballStruck) {
+    if (Math.abs(ball.x - ballStruck.x) < BALL_RADIUS_VALUE * 2) {
+      return {
+        x: ball.x,
+        y: ballStruck.y,
+      }
+    }
+    else if (Math.abs(ball.y - ballStruck.y) < BALL_RADIUS_VALUE * 2) {
+      return {
+        x: ballStruck.x,
+        y: ball.y,
+      }
+    }
   }
 
   function getPowerKeptByCue(ball1, ball2) {
@@ -837,20 +872,31 @@
   }
 
   function ballStrikingOtherBall(ball) {
+    var result = {}
     for (var i = 0; i < ballsOnTable.length; i++) {
       var ballToCheck = ballsOnTable[i];
       if (ball != ballToCheck) {
         var distanceBetweenBalls = getHypotenuseFromDifferences(ball.x - ballToCheck.x, ball.y - ballToCheck.y);
         if (distanceBetweenBalls < 2 * BALL_RADIUS_VALUE) {
-          return ballToCheck;
+          if (!result.ball1) result.ball1 = ballToCheck;
+          else result.ball2 = ballToCheck;
         }
       }
+    }
+    if (result.ball1) {
+      return result;
     }
   }
 
   function calculateBallDataAfterStriking(ball, ballStruck) {
     var lineBetween = {};
     lineBetween.slope = (ball.y - ballStruck.y) / (ball.x - ballStruck.x);
+    if (lineBetween.slope == Infinity) {
+      return { slope: 0, direction: ball.direction == 'right' ? 'left' : 'right', directionUpDown: ball.directionUpDown, isMoving: true, distanceMovedPerIncrement: ball.distanceMovedPerIncrement };
+    }
+    else if (lineBetween.slope == 0) {
+      return { slope: Infinity, directionUpDown: ball.directionUpDown == 'top' ? 'bottom' : 'top', isMoving: true, distanceMovedPerIncrement: ball.distanceMovedPerIncrement };
+    }
     lineBetween.yIntercept = ball.y - lineBetween.slope * ball.x;
     var newTrajectory = {};
     newTrajectory.slopeBetweenBalls = lineBetween.slope;
@@ -909,6 +955,9 @@
   }
 
   function getSlopeReflectingAcrossSlope(oldSlope, slopeBetween) {
+    if (slopeBetween == Infinity) {
+      slopeBetween = 1000000000000; // Approximation!!!
+    }
       // eq from StackOverflow: double M3 = ((2 * M1) + (M2 * pow(M1, 2)) - M2) / (2 * M1 * M2 - pow(M1, 2) + 1);
     return ((2 * slopeBetween) + (oldSlope * Math.pow(slopeBetween, 2)) - oldSlope) / ( 2 * slopeBetween * oldSlope - Math.pow(slopeBetween, 2) + 1);
   }
@@ -1356,25 +1405,20 @@
     var result = [];
 /*
     result.push(placeBall('white', adjustedPositionX(82) + 'px', adjustedPositionY(49) + 'px', 'cueball'));
-
     result.push(placeBall('green', adjustedPositionX(352 - BALL_RADIUS_VALUE * 2) + 'px', adjustedPositionY(49) + 'px'));
-
     result.push(placeBall('green', adjustedPositionX(352) + 'px', adjustedPositionY(49 - BALL_RADIUS_VALUE) + 'px'));
     result.push(placeBall('green', adjustedPositionX(352) + 'px', adjustedPositionY(49 + BALL_RADIUS_VALUE) + 'px'));
-
     result.push(placeBall('green', adjustedPositionX(352 + BALL_RADIUS_VALUE * 2) + 'px', adjustedPositionY(49 - BALL_RADIUS_VALUE * 2) + 'px'));
     result.push(placeBall('green', adjustedPositionX(352 + BALL_RADIUS_VALUE * 2) + 'px', adjustedPositionY(49) + 'px'));
     result.push(placeBall('green', adjustedPositionX(352 + BALL_RADIUS_VALUE * 2) + 'px', adjustedPositionY(49 + BALL_RADIUS_VALUE * 2) + 'px'));
-
     result.push(placeBall('green', adjustedPositionX(352 + BALL_RADIUS_VALUE * 4) + 'px', adjustedPositionY(49 - BALL_RADIUS_VALUE) + 'px'));
     result.push(placeBall('green', adjustedPositionX(352 + BALL_RADIUS_VALUE * 4) + 'px', adjustedPositionY(49 + BALL_RADIUS_VALUE) + 'px'));
-
     result.push(placeBall('green', adjustedPositionX(352 + BALL_RADIUS_VALUE * 6) + 'px', adjustedPositionY(49) + 'px'));
 */
 
     result.push(placeBall('white', adjustedPositionX(82) + 'px', adjustedPositionY(49) + 'px', 'cueball'));
-    result.push(placeBall('green', adjustedPositionX(352) + 'px', adjustedPositionY(49 - BALL_RADIUS_VALUE) + 'px'));
-    result.push(placeBall('green', adjustedPositionX(352) + 'px', adjustedPositionY(49 + BALL_RADIUS_VALUE) + 'px'));
+    result.push(placeBall('green', adjustedPositionX(82 - BALL_RADIUS_VALUE) + 'px', adjustedPositionY(149) + 'px'));
+    result.push(placeBall('green', adjustedPositionX(82 + BALL_RADIUS_VALUE) + 'px', adjustedPositionY(149) + 'px'));
 
     return result;
   }
