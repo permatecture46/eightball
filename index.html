@@ -45,7 +45,7 @@
   var BALL_RADIUS = BALL_RADIUS_PERCENTAGE * 100 + "%";
   var TABLE_WIDTH, TABLE_HEIGHT, TABLE_X, TABLE_Y, BALL_RADIUS_VALUE;
   var TIME_BETWEEN_INCREMENTS = 1;
-  var MAX_DISTANCE_MOVED = 50;
+  var MAX_DISTANCE_MOVED = 20;
   var TEST_BALL_NUM = 8;
 
   var CORNER_MIN_X, CORNER_MAX_X, CORNER_MIN_Y, CORNER_MAX_Y;
@@ -77,13 +77,13 @@
 
   var STICK_TO_CUE_DISTANCE = 15, STICK_END_TO_CUE_DISTANCE = 160;
 
-  var MAX_PREDICTOR_PATH_LENGTH = 50;
+  var MAX_PREDICTOR_PATH_LENGTH = 75;
 
   window.addEventListener('load', function(event) {
     setTableSizeVariables();
-    ballsOnTable = placeRandomBalls();
-    ballsOnTable.push(placeRandomBall('white'));
-    //ballsOnTable = placeNonrandomBalls();
+    //ballsOnTable = placeRandomBalls();
+    //ballsOnTable.push(placeRandomBall('white'));
+    ballsOnTable = placeNonrandomBalls();
     setPredictedCueLocationListener();
     setClickListener();
     setMouseDownListener();
@@ -98,11 +98,11 @@
       var cursorLocation = {};
       if (cueBall.x < TABLE_X + TABLE_WIDTH / 2) {
         cursorLocation.x = TABLE_X + TABLE_WIDTH * .75;
-        cursorLocation.y = cueBall.y - TABLE_Y;
+        cursorLocation.y = cueBall.y - TABLE_Y - .01; // .01 so slope isn't 0 which throws off one of the equations later
       }
       else {
         cursorLocation.x = TABLE_X + TABLE_WIDTH * .25;
-        cursorLocation.y = cueBall.y - TABLE_Y;
+        cursorLocation.y = cueBall.y - TABLE_Y - .01; // .01 so slope isn't 0 which throws off one of the equations later
       }
       placePredictorGraphics(cueBall, cursorLocation.x, cursorLocation.y, cueBall.x, cueBall.y);
     }
@@ -174,7 +174,6 @@
     var newBallData = calculateBallDataAfterStriking(cueBall, ballIntersecting);
     var X1 = cueBall.x;
     var Y1 = cueBall.y;
-lz(newBallData);
     var powerKeptByCue = getPowerKeptByCue(cueBall, newBallData);
     var X2change = ((MAX_PREDICTOR_PATH_LENGTH * powerKeptByCue) / Math.sqrt(1 + Math.pow(newBallData.slope, 2))) * (newBallData.direction == 'left' ? -1 : 1);
     var X2 = X1 + X2change;
@@ -254,10 +253,10 @@ lz(newBallData);
 
   function setMouseUpListener() {
     document.addEventListener('mouseup', function(event) {
-      if (selectingPower) {
+      var stick = document.getElementById('stick');
+      var offsetY = stick.getBoundingClientRect().y;
+      if (selectingPower && offsetY > 179) {  // sometimes stays at y=1 (=179) when reset!
         selectingPower = false;
-        var stick = document.getElementById('stick');
-        var offsetY = stick.getBoundingClientRect().y;
         var originalOffsetY = STICK_Y_PERCENTAGE * .01 * SCREEN_HEIGHT + MARGIN_TOP;
         var y = offsetY - originalOffsetY;
         var stickHeight = STICK_HEIGHT_PERCENTAGE * .01 * SCREEN_HEIGHT;
@@ -272,6 +271,9 @@ lz(newBallData);
           gameStarted = true;
           incrementLocationsOfBalls();
         }
+      }
+      else if (selectingPower == 1) {
+        selectingPower = false;
       }
     });
   }
@@ -451,17 +453,17 @@ lz(newBallData);
   }
 
   function updateOpacityUp(i, cover) {
-    var percentage = i / 25;
+    var percentage = i / 50;
     cover.style.opacity = percentage * 1;
     i++;
-    if (i <= 25) setTimeout(function() { updateOpacityUp(i, cover) }, 1);
+    if (i <= 50) setTimeout(function() { updateOpacityUp(i, cover) }, 1);
   }
 
   function updateOpacityDown(i, cover, finalize) {
-    var percentage = i / 25;
+    var percentage = i / 50;
     cover.style.opacity = 1 - percentage * 1;
     i++;
-    if (i <= 25) setTimeout(function() { updateOpacityDown(i, cover, finalize) }, 1);
+    if (i <= 50) setTimeout(function() { updateOpacityDown(i, cover, finalize) }, 1);
     else finalize();
   }
 
@@ -853,9 +855,12 @@ lz(newBallData);
     var newTrajectory = {};
     newTrajectory.slopeBetweenBalls = lineBetween.slope;
     var newSlope = getSlopeReflectingAcrossSlope(ball.slope, lineBetween.slope);
-    newTrajectory.slope = newSlope;
     var oldSlope = ball.slope;
     var quadrant = getObjectQuadrant(ballStruck.x, ballStruck.y, ball.x, ball.y);
+    if (!ball.slope) {
+      newSlope = correctNewSlope(newSlope, quadrant);
+    }
+    newTrajectory.slope = newSlope;
     if (newSlope > 0) {
       if ((oldSlope > 0 && ball.direction == 'left' && quadrant == 1) || 
          (oldSlope < 0 && ball.direction == 'right' && (quadrant == 2 || quadrant == 1) && Math.abs(lineBetween.slope) > oldSlope) ||
@@ -897,6 +902,10 @@ lz(newBallData);
       }
     }
     return newTrajectory;
+  }
+
+  function correctNewSlope(newSlope, quadrant) {
+    return newSlope;
   }
 
   function getSlopeReflectingAcrossSlope(oldSlope, slopeBetween) {
@@ -1345,9 +1354,28 @@ lz(newBallData);
 
   function placeNonrandomBalls() {
     var result = [];
-    result.push(placeBall('grey', 82 + 'px', 49 + 'px', 'cueball'));
-    result.push(placeBall('green', 167 + 'px', 43 + 'px'));
-    result.push(placeBall('green', 354 + 'px', 78 + 'px'));
+/*
+    result.push(placeBall('white', adjustedPositionX(82) + 'px', adjustedPositionY(49) + 'px', 'cueball'));
+
+    result.push(placeBall('green', adjustedPositionX(352 - BALL_RADIUS_VALUE * 2) + 'px', adjustedPositionY(49) + 'px'));
+
+    result.push(placeBall('green', adjustedPositionX(352) + 'px', adjustedPositionY(49 - BALL_RADIUS_VALUE) + 'px'));
+    result.push(placeBall('green', adjustedPositionX(352) + 'px', adjustedPositionY(49 + BALL_RADIUS_VALUE) + 'px'));
+
+    result.push(placeBall('green', adjustedPositionX(352 + BALL_RADIUS_VALUE * 2) + 'px', adjustedPositionY(49 - BALL_RADIUS_VALUE * 2) + 'px'));
+    result.push(placeBall('green', adjustedPositionX(352 + BALL_RADIUS_VALUE * 2) + 'px', adjustedPositionY(49) + 'px'));
+    result.push(placeBall('green', adjustedPositionX(352 + BALL_RADIUS_VALUE * 2) + 'px', adjustedPositionY(49 + BALL_RADIUS_VALUE * 2) + 'px'));
+
+    result.push(placeBall('green', adjustedPositionX(352 + BALL_RADIUS_VALUE * 4) + 'px', adjustedPositionY(49 - BALL_RADIUS_VALUE) + 'px'));
+    result.push(placeBall('green', adjustedPositionX(352 + BALL_RADIUS_VALUE * 4) + 'px', adjustedPositionY(49 + BALL_RADIUS_VALUE) + 'px'));
+
+    result.push(placeBall('green', adjustedPositionX(352 + BALL_RADIUS_VALUE * 6) + 'px', adjustedPositionY(49) + 'px'));
+*/
+
+    result.push(placeBall('white', adjustedPositionX(82) + 'px', adjustedPositionY(49) + 'px', 'cueball'));
+    result.push(placeBall('green', adjustedPositionX(352) + 'px', adjustedPositionY(49 - BALL_RADIUS_VALUE) + 'px'));
+    result.push(placeBall('green', adjustedPositionX(352) + 'px', adjustedPositionY(49 + BALL_RADIUS_VALUE) + 'px'));
+
     return result;
   }
 
