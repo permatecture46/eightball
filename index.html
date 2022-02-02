@@ -45,7 +45,7 @@
   var BALL_RADIUS = BALL_RADIUS_PERCENTAGE * 100 + "%";
   var TABLE_WIDTH, TABLE_HEIGHT, TABLE_X, TABLE_Y, BALL_RADIUS_VALUE;
   var TIME_BETWEEN_INCREMENTS = 1;
-  var MAX_DISTANCE_MOVED = 20;
+  var MAX_DISTANCE_MOVED = 30;
   var TEST_BALL_NUM = 8;
 
   var CORNER_MIN_X, CORNER_MAX_X, CORNER_MIN_Y, CORNER_MAX_Y;
@@ -81,9 +81,9 @@
 
   window.addEventListener('load', function(event) {
     setTableSizeVariables();
-    ballsOnTable = placeRandomBalls();
-    ballsOnTable.push(placeRandomBall('white'));
-    //ballsOnTable = placeNonrandomBalls();
+    //ballsOnTable = placeRandomBalls();
+    //ballsOnTable.push(placeRandomBall('white'));
+    ballsOnTable = placeNonrandomBalls();
     setPredictedCueLocationListener();
     setClickListener();
     setMouseDownListener();
@@ -1403,22 +1403,22 @@
 
   function placeNonrandomBalls() {
     var result = [];
-/*
-    result.push(placeBall('white', adjustedPositionX(82) + 'px', adjustedPositionY(49) + 'px', 'cueball'));
-    result.push(placeBall('green', adjustedPositionX(352 - BALL_RADIUS_VALUE * 2) + 'px', adjustedPositionY(49) + 'px'));
-    result.push(placeBall('green', adjustedPositionX(352) + 'px', adjustedPositionY(49 - BALL_RADIUS_VALUE) + 'px'));
-    result.push(placeBall('green', adjustedPositionX(352) + 'px', adjustedPositionY(49 + BALL_RADIUS_VALUE) + 'px'));
-    result.push(placeBall('green', adjustedPositionX(352 + BALL_RADIUS_VALUE * 2) + 'px', adjustedPositionY(49 - BALL_RADIUS_VALUE * 2) + 'px'));
-    result.push(placeBall('green', adjustedPositionX(352 + BALL_RADIUS_VALUE * 2) + 'px', adjustedPositionY(49) + 'px'));
-    result.push(placeBall('green', adjustedPositionX(352 + BALL_RADIUS_VALUE * 2) + 'px', adjustedPositionY(49 + BALL_RADIUS_VALUE * 2) + 'px'));
-    result.push(placeBall('green', adjustedPositionX(352 + BALL_RADIUS_VALUE * 4) + 'px', adjustedPositionY(49 - BALL_RADIUS_VALUE) + 'px'));
-    result.push(placeBall('green', adjustedPositionX(352 + BALL_RADIUS_VALUE * 4) + 'px', adjustedPositionY(49 + BALL_RADIUS_VALUE) + 'px'));
-    result.push(placeBall('green', adjustedPositionX(352 + BALL_RADIUS_VALUE * 6) + 'px', adjustedPositionY(49) + 'px'));
-*/
+    result.push(placeBall('white', adjustedPositionX(82) + 'px', adjustedPositionY(130) + 'px', 'cueball'));
+    result.push(placeBall('green', adjustedPositionX(352 - BALL_RADIUS_VALUE * 2) + 'px', adjustedPositionY(130) + 'px'));
+    result.push(placeBall('green', adjustedPositionX(352) + 'px', adjustedPositionY(130 - BALL_RADIUS_VALUE - 1) + 'px'));
+    result.push(placeBall('green', adjustedPositionX(352) + 'px', adjustedPositionY(130 + BALL_RADIUS_VALUE + 1) + 'px'));
+    result.push(placeBall('green', adjustedPositionX(352 + BALL_RADIUS_VALUE * 2) + 'px', adjustedPositionY(130 - BALL_RADIUS_VALUE * 2 - 2) + 'px'));
+    result.push(placeBall('green', adjustedPositionX(352 + BALL_RADIUS_VALUE * 2) + 'px', adjustedPositionY(130) + 'px'));
+    result.push(placeBall('green', adjustedPositionX(352 + BALL_RADIUS_VALUE * 2) + 'px', adjustedPositionY(130 + BALL_RADIUS_VALUE * 2 + 2) + 'px'));
+    result.push(placeBall('green', adjustedPositionX(352 + BALL_RADIUS_VALUE * 4) + 'px', adjustedPositionY(130 - BALL_RADIUS_VALUE - 1) + 'px'));
+    result.push(placeBall('green', adjustedPositionX(352 + BALL_RADIUS_VALUE * 4) + 'px', adjustedPositionY(130 + BALL_RADIUS_VALUE + 1) + 'px'));
+    result.push(placeBall('green', adjustedPositionX(352 + BALL_RADIUS_VALUE * 6) + 'px', adjustedPositionY(130) + 'px'));
 
+/*
     result.push(placeBall('white', adjustedPositionX(82) + 'px', adjustedPositionY(49) + 'px', 'cueball'));
     result.push(placeBall('green', adjustedPositionX(82 - BALL_RADIUS_VALUE) + 'px', adjustedPositionY(149) + 'px'));
     result.push(placeBall('green', adjustedPositionX(82 + BALL_RADIUS_VALUE) + 'px', adjustedPositionY(149) + 'px'));
+*/
 
     return result;
   }
